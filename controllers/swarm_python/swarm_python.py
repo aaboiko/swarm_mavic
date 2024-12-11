@@ -104,7 +104,10 @@ def get_distances(informants):
 
     for i in range(6):
         if ids[i] == -1:
-            distances.append(w)
+            if i == 2 or i == 5:
+                distances.append(w)
+            else:
+                distances.append(0)
         else:
             distances.append(mins[i])
     

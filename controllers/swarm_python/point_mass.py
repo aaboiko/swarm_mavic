@@ -14,13 +14,21 @@ class PointMass:
         self.force = force
 
 
+    def set_dpose(self, dpose):
+        self.dpose = dpose
+
+
     def step(self, dt):
         self.ddpose = self.force / self.mass
+
         dpose = self.dpose + self.ddpose * dt
         self.dpose = dpose
         
-        pose = self.pose + self.dpose * dt
+        pose = self.pose + self.dpose * dt + 0.5 * self.ddpose * dt**2
         self.pose = pose
+
+        #dpose = self.dpose + self.ddpose * dt
+        #self.dpose = dpose
 
 
 class PointsHandler:

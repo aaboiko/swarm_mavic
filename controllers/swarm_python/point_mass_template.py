@@ -4,9 +4,9 @@ import time
 #import keyboard
 
 from control import PID, Sliding
-from point_mass import PointMass, PointsHandler
+from point_mass import PointMass
 
-N_POINTS = 10
+N_POINTS = 5
 
 x_bound_min = -10
 x_bound_max = 10
@@ -15,17 +15,16 @@ y_bound_max = 10
 z_bound_min = 0
 z_bound_max = 20
 
-r_perception = 30.0
-x_anchor = np.array([3.0, 3.0, 1.0])                    
+r_perception = np.inf
+x_anchor = np.array([0.0, 0.0, 1.0])                    
 w = 1.0
 anchor_id = -1
 
-kp = 0.1
-kd = 0.1
-ki = 0.1
+kp = 1
+kd = 0
+ki = 0
 
 points = []
-
 
 def get_nearest_distances(informants):
     min_dist_x_plus, min_dist_y_plus, min_dist_z_plus = np.inf, np.inf, np.inf
@@ -71,35 +70,46 @@ def get_nearest_distances(informants):
     for id in ids:
         ids_set.add(id)
     
-    #distances = [informants[id] for id in ids_set]
-    distances = [informants[id] for id in ids]
+    if len(informants) > 0:
+        vectors = [informants[id] for id in ids]
+        #vectors = [informants[id] for id in ids_set]
+    else:
+        vectors = []
+
+    mins = [min_dist_x_plus, min_dist_y_plus, min_dist_z_plus, min_dist_x_minus, min_dist_y_minus, min_dist_z_minus]
+    distances = []
+
+    for i in range(6):
+        if ids[i] == -1:
+            if i == 2 or i == 5:
+                distances.append(w)
+            else:
+                distances.append(0)
+        else:
+            distances.append(mins[i])
     
-    return distances
+    return distances, vectors
 
 
-def control_force(dt, distances):
+def control_force(dt, distances, vectors):
     d_x_plus, d_y_plus, d_z_plus, d_x_minus, d_y_minus, d_z_minus = distances
+    vec_x_plus, vec_y_plus, vec_z_plus, vec_x_minus, vec_y_minus, vec_z_minus = vectors
 
-    e_x_plus = d_x_plus
-    e_x_minus = d_x_minus
-    e_y_plus = d_y_plus
-    e_y_minus = d_y_minus
     e_z_plus = d_z_plus - w
     e_z_minus = d_z_minus - w
 
     pid = PID(dt=dt, kp=kp, kd=kd, ki=ki)
 
-    ux = pid.get_u(e_x_plus) - pid.get_u(e_x_minus)
-    uy = pid.get_u(e_y_plus) - pid.get_u(e_y_minus)
+
+
+    ux = pid.get_u(d_x_plus) - pid.get_u(d_x_minus)
+    uy = pid.get_u(d_y_plus) - pid.get_u(d_y_minus)
     uz = pid.get_u(e_z_plus) - pid.get_u(e_z_minus)
 
     return np.array([ux, uy, uz])
 
 
 def get_informant(focus_point):
-    print('\nPOints: ')
-    for p in points:
-        print('pose: ' + str(p.pose))
     informant = []
 
     if np.linalg.norm(x_anchor - focus_point.pose) <= r_perception and anchor_id == -1:
@@ -117,31 +127,48 @@ def get_informant(focus_point):
     return informant
 
 
-def draw(points):
-    plt.xlim((x_bound_min, x_bound_max))
-    plt.ylim((y_bound_min, y_bound_max))
+def draw(points, axes='xy'):
+    plt.xlim((2*x_bound_min, 2*x_bound_max))
+    plt.ylim((2*y_bound_min, 2*y_bound_max))
 
     x_anc, y_anc, z_anc = x_anchor
-    plt.scatter(x_anc, y_anc, s=2, color="red")
 
-    for point in points:
-        x, y, z = point.pose
-        plt.scatter(x, y, s=1, color="blue")
+    if axes == 'xy':
+        plt.scatter(x_anc, y_anc, s=2, color="red")
+
+        for point in points:
+            x, y, z = point.pose
+            plt.scatter(x, y, s=1, color="blue")
+
+    if axes == 'xz':
+        plt.scatter(x_anc, z_anc, s=2, color="red")
+
+        for point in points:
+            x, y, z = point.pose
+            plt.scatter(x, z, s=1, color="blue")
+
+    if axes == 'yz':
+        plt.scatter(y_anc, z_anc, s=2, color="red")
+
+        for point in points:
+            x, y, z = point.pose
+            plt.scatter(y, z, s=1, color="blue")
 
 
 def process(dt):
     for point in points:
         informant = get_informant(point)
-        distances = get_nearest_distances(informant)
+        distances, vectors = get_nearest_distances(informant)
         #print(len(distances))
         #print(distances)
-        force = control_force(dt, distances)
+        force = control_force(dt, distances, vectors)
 
-        point.apply_force(force)
+        #point.apply_force(force)
+        point.set_dpose(force)
         point.step(dt)
 
         plt.clf()
-        draw(points)
+        draw(points, axes='xz')
         plt.pause(0.01)
 
 
