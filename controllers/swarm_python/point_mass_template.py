@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-#import keyboard
+import keyboard
 
 from control import PID, Sliding
 from point_mass import PointMass
@@ -165,7 +165,7 @@ def draw(points, axes='xy'):
             plt.scatter(y, z, s=s_point, color="blue")
 
 
-def process(dt):
+def process(dt, file):
     for point in points:
         informant = get_informant(point)
         distances, vectors = get_nearest_distances(informant)
@@ -181,6 +181,11 @@ def process(dt):
         draw(points, axes='xz')
         plt.pause(0.01)
 
+        x, y, z = point.pose
+        file.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' ')
+
+    file.write('\n')
+
 
 def main():
     for i in range(N_POINTS):
@@ -191,16 +196,23 @@ def main():
         points.append(point)
     
     moment_prev = time.time()
+    running = True
+    
+    with open("logs/log_1.txt", "w") as file:
+        while(running):
+            if keyboard.is_pressed('p'):
+                #running = False
+                print("p pressed")
 
-    while(True):
-        moment = time.time()
-        dt = moment - moment_prev
+            moment = time.time()
+            dt = moment - moment_prev
 
-        if dt < 0.001:
-            continue
+            if dt < 0.001:
+                continue
 
-        process(dt)
-        moment_prev = moment
+            process(dt, file)
+            moment_prev = moment
+
 
 main()
 plt.show()
