@@ -24,6 +24,10 @@ kp = 1
 kd = 0
 ki = 0
 
+pid_x = PID(kp=kp, kd=kd, ki=ki)
+pid_y = PID(kp=kp, kd=kd, ki=ki)
+pid_z = PID(kp=kp, kd=kd, ki=ki)
+
 s_point = 10
 s_anchor = 20
 
@@ -101,13 +105,9 @@ def control_force(dt, distances, vectors):
     e_z_plus = d_z_plus - w
     e_z_minus = d_z_minus - w
 
-    pid = PID(dt=dt, kp=kp, kd=kd, ki=ki)
-
-
-
-    ux = pid.get_u(d_x_plus) - pid.get_u(d_x_minus)
-    uy = pid.get_u(d_y_plus) - pid.get_u(d_y_minus)
-    uz = pid.get_u(e_z_plus) - pid.get_u(e_z_minus)
+    ux = pid_x.get_u(d_x_plus, dt) - pid_x.get_u(d_x_minus, dt)
+    uy = pid_y.get_u(d_y_plus, dt) - pid_y.get_u(d_y_minus, dt)
+    uz = pid_z.get_u(e_z_plus, dt) - pid_z.get_u(e_z_minus, dt)
 
     return np.array([ux, uy, uz])
 

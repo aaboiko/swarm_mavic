@@ -11,8 +11,8 @@ class PID:
         self.dt = dt
 
 
-    def get_u(self, e):
-        e_diff = (e - self.e_prev) / self.dt
+    def get_u(self, e, dt):
+        e_diff = (e - self.e_prev) / dt
         u = self.kp * e + self.kd * e_diff + self.ki * self.e_integral
 
         self.e_integral += e

@@ -21,10 +21,13 @@ k_vertical_p = 3.0
 k_roll_p = 50.0
 k_pitch_p = 30.0
 
-r_perception = 30.0
-x_anchor = np.array([3.0, 3.0, 1.0])                    
+r_perception = np.inf
+x_anchor = np.array([3.0, 3.0, 5.0])                    
 w = 1.0
 anchor_id = 1
+
+pitch_disturbance_max = 2.0
+pitch_disturbance_min = -2.0
 
 kp_alt = 2
 kd_alt = 0.0
@@ -34,13 +37,18 @@ kp_roll = 1
 kd_roll = 0.0
 ki_roll = 0.0
 
-kp_pitch = 0.4
-kd_pitch = 0.1
-ki_pitch = 0.4
+kp_pitch = 1
+kd_pitch = 0.0
+ki_pitch = 0.0
 
 kp_yaw = 1
 kd_yaw = 0.0
 ki_yaw = 0.0
+
+pid_alt = PID(kp=kp_alt, kd=kd_alt, ki=ki_alt)
+pid_roll = PID(kp=kp_roll, kd=kd_roll, ki=ki_roll)
+pid_pitch = PID(kp=kp_pitch, kd=kd_pitch, ki=ki_pitch)
+pid_yaw = PID(kp=kp_yaw, kd=kd_yaw, ki=ki_yaw)
 #################################
 
 def CLAMP(value, low, high):
@@ -51,6 +59,10 @@ def CLAMP(value, low, high):
             return high
         else:
             return value
+        
+
+def sigma_control(e):
+    return 2 * (1 / (1 + np.exp(-e))) - 1
 
 
 def get_distances(informants):
@@ -114,14 +126,9 @@ def get_distances(informants):
     return distances, vectors
 
 
-def control_inputs(imu, altitude, distances, vectors):
+def control_inputs(imu, altitude, distances, vectors, type="py"):
     d_x_plus, d_y_plus, d_z_plus, d_x_minus, d_y_minus, d_z_minus = distances
     roll, pitch, yaw = imu
-
-    pid_alt = PID(kp=kp_alt, kd=kd_alt, ki=ki_alt)
-    pid_roll = PID(kp=kp_roll, kd=kd_roll, ki=ki_roll)
-    pid_pitch = PID(kp=kp_pitch, kd=kd_pitch, ki=ki_pitch)
-    pid_yaw = PID(kp=kp_yaw, kd=kd_yaw, ki=ki_yaw)
 
     e_x_plus = d_x_plus
     e_x_minus = d_x_minus
@@ -130,49 +137,33 @@ def control_inputs(imu, altitude, distances, vectors):
     e_z_plus = d_z_plus - w
     e_z_minus = d_z_minus - w
 
-    #e_pitch_plus = e_x_plus * np.cos(yaw)
-    #e_pitch_minus = e_x_minus * np.cos(yaw)
-    e_roll_plus = e_y_plus * np.sin(yaw)
-    e_roll_minus = e_y_minus * np.sin(yaw)
+    if type == "py":
+        target_yaw = np.arctan2(e_y_plus - e_y_minus, e_x_plus - e_x_minus)
+        direction = 1
 
-    vec = np.zeros(3)
-    norm = np.inf
+        if np.cos(target_yaw - yaw) < 0:
+            direction = -1
 
-    for v in vectors:
-        if np.linalg.norm(v) < norm:
-            norm = np.linalg.norm(v)
-            vec = v
+        e_yaw = target_yaw - yaw
 
-    #e_yaw_plus = np.arctan2(e_y_plus, e_x_plus) - yaw
-    #e_yaw_minus = np.arctan2(e_y_minus, e_x_minus) - yaw
-    e_yaw =  np.arctan2(vec[1], vec[0]) - yaw
+        if e_yaw > np.pi:
+            e_yaw -= 2 * np.pi
+        if e_yaw < -np.pi:
+            e_yaw += 2 * np.pi
 
-    #e_pitch_plus = np.sqrt(e_x_plus**2 + e_y_plus**2)
-    #e_pitch_minus = np.sqrt(e_x_minus**2 + e_y_minus**2)
-
-    e_pitch = np.sqrt(vec[0]**2 + vec[1]**2)
-
-    roll_disturbance_ref = pid_roll.get_u(e_roll_plus) - pid_roll.get_u(e_roll_minus)
-    
-    if abs(e_yaw) >= 0.01:
+        e_pitch = np.sqrt((e_x_plus - e_x_minus)**2 + (e_y_plus - e_y_minus)**2)
+        roll_disturbance_ref = 0
         yaw_disturbance_ref = pid_yaw.get_u(e_yaw)
-        pitch_disturbance_ref = 0
-    else:
-        yaw_disturbance_ref = 0
-        pitch_disturbance_ref = pid_pitch.get_u(e_pitch)
+        pitch_disturbance_ref = -direction * pid_pitch.get_u(e_pitch)
 
+        print('e_x_plus = ' + str(e_x_plus) + ', e_x_minus = ' + str(e_x_minus) + ', e_y_plus = ' + str(e_y_plus) + ', e_y_minus = ' + str(e_y_minus) + ', target_yaw = ' + str(target_yaw) + ', yaw = ' + str(yaw) + ', e_yaw = ' + str(e_yaw) + ' e_pitch = ' + str(e_pitch) + ', dir : ' + str(direction))
+
+    if type == "rp":
+        pass
+    
     altitude_ref = altitude + pid_alt.get_u(e_z_plus) - pid_alt.get_u(e_z_minus)
 
-    #print('e_x_plus = ' + str(e_x_plus) + ', e_x_minus = ' + str(e_x_minus) + ', e_pitch_plus = ' + str(e_pitch_plus) + ', e_pitch_minus = ' + str(e_pitch_minus))
-    #print('e_y_plus = ' + str(e_y_plus) + ', e_y_minus = ' + str(e_y_minus) + ', e_roll_plus = ' + str(e_roll_plus) + ', e_roll_minus = ' + str(e_roll_minus))
-    #print('e_z_plus = ' + str(e_z_plus) + ', e_z_minus = ' + str(e_z_minus))
-    print("roll dist: " + str(roll_disturbance_ref))
-
     return roll_disturbance_ref, pitch_disturbance_ref, yaw_disturbance_ref, altitude_ref
-
-
-'''def control_inputs(imu, altitude, distances):
-    roll, pitch, yaw = imu'''
         
 
 def get_motor_moments(imu, gyro, altitude, roll_disturbance, pitch_disturbance, yaw_disturbance, target_altitude):
@@ -245,7 +236,7 @@ def main():
 
     print("Starting the drone...\n")
 
-    target_altitude = np.random.uniform(1.0, 5.0)
+    target_altitude = np.random.uniform(1.0, 10.0)
 
     while robot.step(timestep) != -1:
         time = robot.getTime()
