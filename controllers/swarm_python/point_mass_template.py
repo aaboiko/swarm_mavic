@@ -6,7 +6,7 @@ import keyboard
 from control import PID, Sliding
 from point_mass import PointMass
 
-N_POINTS = 10
+N_POINTS = 1
 
 x_bound_min = -10
 x_bound_max = 10
@@ -21,8 +21,8 @@ w = 1.0
 anchor_id = -1
 
 kp = 1
-kd = 0
-ki = 0
+kd = 1
+ki = 10
 
 pid_x = PID(kp=kp, kd=kd, ki=ki)
 pid_y = PID(kp=kp, kd=kd, ki=ki)
