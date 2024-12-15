@@ -27,9 +27,6 @@ class PointMass:
         pose = self.pose + self.dpose * dt + 0.5 * self.ddpose * dt**2
         self.pose = pose
 
-        #dpose = self.dpose + self.ddpose * dt
-        #self.dpose = dpose
-
 
 class PointsHandler:
     def __init__(self, n):

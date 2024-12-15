@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import math
 import matplotlib.pyplot as plt
+import os
 
 from controller import Robot, Supervisor
 from controller import Compass
@@ -20,19 +21,21 @@ k_vertical_offset = 0.6
 k_vertical_p = 3.0
 k_roll_p = 50.0
 k_pitch_p = 30.0
-#k_roll_p = 75
-#k_pitch_p = 45
+#k_roll_p = 10
+#k_pitch_p = 50
 
 r_perception = np.inf
 x_anchor = np.array([3.0, 3.0, 5.0])                    
 w = 1.0
 anchor_id = 1
+log_id = 1
 
-pitch_disturbance_max = 3.0
+pitch_disturbance_max = 5.0
 pitch_disturbance_min = -2.0
-roll_disturbance_max = 3.0
+roll_disturbance_max = 5.0
 roll_disturbance_min = -2.0
 yaw_disturbance_max = 1.3
+alt_disturbance_max = 0.05
 
 kp_alt = 2
 kd_alt = 0.0
@@ -55,7 +58,7 @@ pid_roll = PID(kp=kp_roll, kd=kd_roll, ki=ki_roll)
 pid_pitch = PID(kp=kp_pitch, kd=kd_pitch, ki=ki_pitch)
 pid_yaw = PID(kp=kp_yaw, kd=kd_yaw, ki=ki_yaw)
 
-sigma_alt = SigmaControl(0.05)
+sigma_alt = SigmaControl(alt_disturbance_max)
 sigma_roll = SigmaControl(roll_disturbance_max)
 sigma_pitch = SigmaControl(pitch_disturbance_max)
 sigma_yaw = SigmaControl(yaw_disturbance_max)
@@ -191,7 +194,6 @@ def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
 
         e_roll = np.sin(e_yaw)
         e_pitch = -np.cos(e_yaw)
-
     
         if controller == "sigma":
             roll_disturbance_ref = sigma_roll.get_u(e_roll, d_mean, id)
@@ -200,14 +202,19 @@ def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
             roll_disturbance_ref = pid_roll.get_u(e_roll)
             pitch_disturbance_ref = pid_pitch.get_u(e_pitch)
 
-        yaw_disturbance_ref = 0
+        yaw_disturbance_ref = sigma_yaw.get_u(e_yaw, d_mean, id)
 
         if id == 2:
             print('u_roll = ' + str(roll_disturbance_ref) + ', u_pitch = ' + str(pitch_disturbance_ref) + ', target_yaw = ' + str(target_yaw) + ', e_x = ' + str(e_x) + ', e_y= ' + str(e_y))
+            print('directory: ' + str(os.getcwd()))
 
         #print('e_x_plus = ' + str(e_x_plus) + ', e_x_minus = ' + str(e_x_minus) + ', e_y_plus = ' + str(e_y_plus) + ', e_y_minus = ' + str(e_y_minus) + ', target_yaw = ' + str(target_yaw) + ', yaw = ' + str(yaw) + ', e_yaw = ' + str(e_yaw) + ' e_pitch = ' + str(e_pitch) + ', e_roll = ' + str(e_roll))
     
+    if type == "alt":
+        pass
+    
     altitude_ref = altitude + pid_alt.get_u(e_z_plus) - pid_alt.get_u(e_z_minus)
+    #altitude_ref = altitude + sigma_alt.get_u(e_z_plus - e_z_minus, d_mean, id)
 
     return roll_disturbance_ref, pitch_disturbance_ref, yaw_disturbance_ref, altitude_ref
         
@@ -216,9 +223,8 @@ def get_motor_moments(imu, gyro, altitude, roll_disturbance, pitch_disturbance, 
     roll, pitch, yaw = imu
     roll_velocity, pitch_velocity, yaw_velocity = gyro
     
-    clamp = 1
-    roll_input = k_roll_p * CLAMP(roll, -clamp, clamp) + roll_velocity + roll_disturbance
-    pitch_input = k_pitch_p * CLAMP(pitch, -clamp, clamp) + pitch_velocity + pitch_disturbance
+    roll_input = k_roll_p * CLAMP(roll, -1.0, 1.0) + roll_velocity + roll_disturbance
+    pitch_input = k_pitch_p * CLAMP(pitch, -1.0, 1.0) + pitch_velocity + pitch_disturbance
     yaw_input = yaw_disturbance
     clamped_difference_altitude = CLAMP(target_altitude - altitude + k_vertical_offset, -1.0, 1.0)
     vertical_input = k_vertical_p * clamped_difference_altitude**3
@@ -283,7 +289,18 @@ def main():
 
     print("Starting the drone...\n")
 
-    target_altitude = np.random.uniform(1.0, 10.0)
+    target_altitude = np.random.uniform(2.0, 15.0)
+
+    os.chdir('../../logs')
+    folder_name = "log_" + str(log_id)
+    path = "/" + folder_name
+    
+    #print(os.path.exists(path))
+    if not os.path.isdir(folder_name):
+        os.mkdir(folder_name)
+    
+    os.chdir(folder_name)
+    #file = open("robot_" + str(robot_id) + ".txt", "w")
 
     while robot.step(timestep) != -1:
         time = robot.getTime()
@@ -301,7 +318,7 @@ def main():
         yaw_disturbance = 0.0
 
         #Dealing with the swarming algorithm######################################################
-        if robot.getTime() > 5.0:
+        if robot.getTime() > 8.0:
             informants = []
             x_cur = np.array(gps.getValues())
 
@@ -324,6 +341,11 @@ def main():
                 #print("robot_id: " + str(robot_id))
                 #print('roll: ' + str(roll_disturbance) + ', pitch: ' + str(pitch_disturbance) + ', yaw: ' + str(yaw_disturbance) + ', alt: ' + str(target_altitude))
 
+        #Logging the robot`s parameters
+        x, y, z = gps.getValues()
+        roll, pitch, yaw = imu_values
+        line = str(x) + ' ' + str(y) + ' ' + str(z) + ' ' + str(roll) + ' ' + str(pitch) + ' ' + str(yaw) + ' ' + str(roll_disturbance) + ' ' + str(pitch_disturbance) + ' ' + str(yaw_disturbance) + ' ' + str(target_altitude) + '\n'
+        #file.write(line)
         #######################################################################################
 
         key = keyboard.getKey()
@@ -358,6 +380,8 @@ def main():
         front_right_motor.setVelocity(-front_right_motor_input)
         rear_left_motor.setVelocity(-rear_left_motor_input)
         rear_right_motor.setVelocity(rear_right_motor_input)
+
+    #file.close()
 
 
 if __name__ == '__main__':

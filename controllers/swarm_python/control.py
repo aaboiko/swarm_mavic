@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 class PID:
     def __init__(self, dt=0.008, kp=1.0, kd=0.0, ki=0.0):
@@ -37,6 +38,9 @@ class SigmaControl:
         self.e_integral = 0.0
         self.dt = dt
         self.u_prev = 0
+        self.du_prev = 0
+        self.prev_moment = 0
+        self.u_out = 0
 
 
     def clamp(self, value):
@@ -50,22 +54,25 @@ class SigmaControl:
 
 
     def get_u(self, e, d, id):
-        u = self.max_value * (2 * (1 / (1 + np.exp(-e))) - 1)
-        #u = 
-        if d > 0.5:
-            thres = 0.01
-        else:
-            thres = np.inf
+        k = 1
+        u = (np.exp(e*k) - np.exp(-e*k)) / (np.exp(e*k) + np.exp(-e*k))
 
-        if abs(u - self.u_prev) > thres:
-            if u > self.u_prev:
-                u = self.u_prev + thres
-            else:
-                u = self.u_prev - thres
+        '''if abs(u - self.u_prev) > 1:
+            u = 0'''
+        
+        
+        thres = 0.07
+        du = u - self.u_prev
+
+        if du > thres:
+            u = self.u_prev + thres
+        if -du > thres:
+            u = self.u_prev - thres
         
         self.e_integral += e
         self.e_prev = e
         self.u_prev = u
+        self.du_prev = du
 
         return u
     
