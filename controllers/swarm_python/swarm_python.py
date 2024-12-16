@@ -28,7 +28,6 @@ r_perception = np.inf
 x_anchor = np.array([3.0, 3.0, 5.0])                    
 w = 1.0
 anchor_id = 1
-log_id = 1
 
 pitch_disturbance_max = 5.0
 pitch_disturbance_min = -2.0
@@ -206,7 +205,6 @@ def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
 
         if id == 2:
             print('u_roll = ' + str(roll_disturbance_ref) + ', u_pitch = ' + str(pitch_disturbance_ref) + ', target_yaw = ' + str(target_yaw) + ', e_x = ' + str(e_x) + ', e_y= ' + str(e_y))
-            print('directory: ' + str(os.getcwd()))
 
         #print('e_x_plus = ' + str(e_x_plus) + ', e_x_minus = ' + str(e_x_minus) + ', e_y_plus = ' + str(e_y_plus) + ', e_y_minus = ' + str(e_y_minus) + ', target_yaw = ' + str(target_yaw) + ', yaw = ' + str(yaw) + ', e_yaw = ' + str(e_yaw) + ' e_pitch = ' + str(e_pitch) + ', e_roll = ' + str(e_roll))
     
@@ -237,7 +235,7 @@ def get_motor_moments(imu, gyro, altitude, roll_disturbance, pitch_disturbance, 
     return front_left_motor_input, front_right_motor_input, rear_left_motor_input, rear_right_motor_input
 
 
-def main():
+def main(logging=False, log_id=1):
     robot = Supervisor()
     print('robot initiated')
     timestep = int(robot.getBasicTimeStep())
@@ -291,16 +289,16 @@ def main():
 
     target_altitude = np.random.uniform(2.0, 15.0)
 
-    os.chdir('../../logs')
-    folder_name = "log_" + str(log_id)
-    path = "/" + folder_name
-    
-    #print(os.path.exists(path))
-    if not os.path.isdir(folder_name):
-        os.mkdir(folder_name)
-    
-    os.chdir(folder_name)
-    #file = open("robot_" + str(robot_id) + ".txt", "w")
+    if logging:
+        os.chdir('../../logs')
+        folder_name = "log_" + str(log_id)
+        
+        if not os.path.isdir(folder_name):
+            os.mkdir(folder_name)
+        
+        os.chdir(folder_name)
+        file = open("robot_" + str(robot_id) + ".txt", "w")
+        print('logging started. Folder name: ' + folder_name)
 
     while robot.step(timestep) != -1:
         time = robot.getTime()
@@ -342,16 +340,16 @@ def main():
                 #print('roll: ' + str(roll_disturbance) + ', pitch: ' + str(pitch_disturbance) + ', yaw: ' + str(yaw_disturbance) + ', alt: ' + str(target_altitude))
 
         #Logging the robot`s parameters
-        x, y, z = gps.getValues()
-        roll, pitch, yaw = imu_values
-        line = str(x) + ' ' + str(y) + ' ' + str(z) + ' ' + str(roll) + ' ' + str(pitch) + ' ' + str(yaw) + ' ' + str(roll_disturbance) + ' ' + str(pitch_disturbance) + ' ' + str(yaw_disturbance) + ' ' + str(target_altitude) + '\n'
-        #file.write(line)
+        if logging:
+            x, y, z = gps.getValues()
+            roll, pitch, yaw = imu_values
+            line = str(x) + ' ' + str(y) + ' ' + str(z) + ' ' + str(roll) + ' ' + str(pitch) + ' ' + str(yaw) + ' ' + str(roll_disturbance) + ' ' + str(pitch_disturbance) + ' ' + str(yaw_disturbance) + ' ' + str(target_altitude) + '\n'
+            file.write(line)
         #######################################################################################
 
         key = keyboard.getKey()
 
         while key > 0:
-            val = 0.5
             if robot_id == anchor_id:
                 if key == Keyboard.UP:
                     pitch_disturbance = -2.0
@@ -381,8 +379,9 @@ def main():
         rear_left_motor.setVelocity(-rear_left_motor_input)
         rear_right_motor.setVelocity(rear_right_motor_input)
 
-    #file.close()
+    if logging:
+        file.close()
 
 
 if __name__ == '__main__':
-    main()
+    main(logging=False, log_id=2)
