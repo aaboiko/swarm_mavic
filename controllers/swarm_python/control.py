@@ -1,6 +1,18 @@
 import numpy as np
 import time
 
+U_MAX = 2.0
+
+
+def clamp(value):
+    if value < -U_MAX:
+        return -U_MAX
+    else:
+        if value > U_MAX:
+            return U_MAX
+        else:
+            return value
+
 class PID:
     def __init__(self, dt=0.008, kp=1.0, kd=0.0, ki=0.0):
         self.kp = kp
@@ -21,6 +33,18 @@ class PID:
 
     def get_u(self, e):
         e_diff = (e - self.e_prev) / self.dt
+        #print('e = ' + str(e) + ', e_prev = ' + str(self.e_prev) + ', de = ' + str(e_diff))
+        u = self.kp * e + self.kd * e_diff + self.ki * self.e_integral
+
+        self.e_integral += e
+        self.e_prev = e
+        self.u_prev = u
+
+        return clamp(u)
+    
+
+    def get_u_by_dt(self, e, dt):
+        e_diff = (e - self.e_prev) / dt
         #print('e = ' + str(e) + ', e_prev = ' + str(self.e_prev) + ', de = ' + str(e_diff))
         u = self.kp * e + self.kd * e_diff + self.ki * self.e_integral
 

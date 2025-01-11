@@ -40,11 +40,11 @@ kp_alt = 2
 kd_alt = 0.0
 ki_alt = 0.0
 
-kp_roll = 0.5
+kp_roll = 1.0
 kd_roll = 0.0
 ki_roll = 0.0
 
-kp_pitch = 0.5
+kp_pitch = 1.0
 kd_pitch = 0.0
 ki_pitch = 0.0
 
@@ -140,7 +140,7 @@ def get_distances(informants):
     return distances, vectors
 
 
-def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
+def control_inputs(imu, altitude, distances, id, type="rp", controller="pid"):
     d_x_plus, d_y_plus, d_z_plus, d_x_minus, d_y_minus, d_z_minus = distances
     roll, pitch, yaw = imu
 
@@ -287,7 +287,10 @@ def main(logging=False, log_id=1):
 
     print("Starting the drone...\n")
 
-    target_altitude = np.random.uniform(2.0, 15.0)
+    if robot_id == anchor_id:
+        target_altitude = 10.0
+    else:
+        target_altitude = np.random.uniform(1.0, 10.0)
 
     if logging:
         os.chdir('../../logs')
@@ -315,6 +318,8 @@ def main(logging=False, log_id=1):
         pitch_disturbance = 0.0
         yaw_disturbance = 0.0
 
+        #distances_to_log = []
+
         #Dealing with the swarming algorithm######################################################
         if robot.getTime() > 8.0:
             informants = []
@@ -338,14 +343,19 @@ def main(logging=False, log_id=1):
                 roll_disturbance, pitch_disturbance, yaw_disturbance, target_altitude = control_inputs(imu_values, altitude, distances, robot_id)
                 #print("robot_id: " + str(robot_id))
                 #print('roll: ' + str(roll_disturbance) + ', pitch: ' + str(pitch_disturbance) + ', yaw: ' + str(yaw_disturbance) + ', alt: ' + str(target_altitude))
+                #distances_to_log = [item for item in distances]
+            else:
+                distances = [0 for i in range(6)]
 
-        #Logging the robot`s parameters
-        if logging:
-            x, y, z = gps.getValues()
-            roll, pitch, yaw = imu_values
-            line = str(x) + ' ' + str(y) + ' ' + str(z) + ' ' + str(roll) + ' ' + str(pitch) + ' ' + str(yaw) + ' ' + str(roll_disturbance) + ' ' + str(pitch_disturbance) + ' ' + str(yaw_disturbance) + ' ' + str(target_altitude) + '\n'
-            file.write(line)
-        #######################################################################################
+            #Logging the robot`s parameters
+            if logging:
+                x, y, z = gps.getValues()
+                roll, pitch, yaw = imu_values
+                #print('distances_to_log: ' + str(distances_to_log))
+                d_x_plus, d_y_plus, d_z_plus, d_x_minus, d_y_minus, d_z_minus = distances
+                line = str(x) + ' ' + str(y) + ' ' + str(z) + ' ' + str(roll) + ' ' + str(pitch) + ' ' + str(yaw) + ' ' + str(roll_disturbance) + ' ' + str(pitch_disturbance) + ' ' + str(yaw_disturbance) + ' ' + str(target_altitude) + ' ' + str(d_x_plus) + ' ' + str(d_x_minus) + ' ' + str(d_y_plus) + ' ' + str(d_y_minus) + ' ' + str(d_z_plus) + ' ' + str(d_z_minus) + '\n'
+                file.write(line)
+            #######################################################################################
 
         key = keyboard.getKey()
 
@@ -384,4 +394,4 @@ def main(logging=False, log_id=1):
 
 
 if __name__ == '__main__':
-    main(logging=False, log_id=2)
+    main(logging=False, log_id=4)

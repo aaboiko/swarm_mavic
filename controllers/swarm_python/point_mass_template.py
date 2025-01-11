@@ -1,18 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-import keyboard
+import os
 
 from control import PID, Sliding
 from point_mass import PointMass
 
-N_POINTS = 1
+N_POINTS = 10
 
 x_bound_min = -10
 x_bound_max = 10
 y_bound_min = -10
 y_bound_max = 10
-z_bound_min = -1
+z_bound_min = 0
 z_bound_max = 10
 
 r_perception = np.inf
@@ -21,8 +21,8 @@ w = 1.0
 anchor_id = -1
 
 kp = 1
-kd = 1
-ki = 10
+kd = 0
+ki = 0
 
 pid_x = PID(kp=kp, kd=kd, ki=ki)
 pid_y = PID(kp=kp, kd=kd, ki=ki)
@@ -76,12 +76,6 @@ def get_nearest_distances(informants):
 
     for id in ids:
         ids_set.add(id)
-    
-    if len(informants) > 0:
-        vectors = [informants[id] for id in ids]
-        #vectors = [informants[id] for id in ids_set]
-    else:
-        vectors = []
 
     mins = [min_dist_x_plus, min_dist_y_plus, min_dist_z_plus, min_dist_x_minus, min_dist_y_minus, min_dist_z_minus]
     distances = []
@@ -95,19 +89,18 @@ def get_nearest_distances(informants):
         else:
             distances.append(mins[i])
     
-    return distances, vectors
+    return distances
 
 
-def control_force(dt, distances, vectors):
+def control_force(dt, distances):
     d_x_plus, d_y_plus, d_z_plus, d_x_minus, d_y_minus, d_z_minus = distances
-    vec_x_plus, vec_y_plus, vec_z_plus, vec_x_minus, vec_y_minus, vec_z_minus = vectors
 
     e_z_plus = d_z_plus - w
     e_z_minus = d_z_minus - w
 
-    ux = pid_x.get_u(d_x_plus, dt) - pid_x.get_u(d_x_minus, dt)
-    uy = pid_y.get_u(d_y_plus, dt) - pid_y.get_u(d_y_minus, dt)
-    uz = pid_z.get_u(e_z_plus, dt) - pid_z.get_u(e_z_minus, dt)
+    ux = pid_x.get_u_by_dt(d_x_plus, dt) - pid_x.get_u_by_dt(d_x_minus, dt)
+    uy = pid_y.get_u_by_dt(d_y_plus, dt) - pid_y.get_u_by_dt(d_y_minus, dt)
+    uz = pid_z.get_u_by_dt(e_z_plus, dt) - pid_z.get_u_by_dt(e_z_minus, dt)
 
     return np.array([ux, uy, uz])
 
@@ -165,13 +158,15 @@ def draw(points, axes='xy'):
             plt.scatter(y, z, s=s_point, color="blue")
 
 
-def process(dt, file):
+def process(dt):
+    #os.chdir('../../logs/point_mass/')
+
     for point in points:
         informant = get_informant(point)
-        distances, vectors = get_nearest_distances(informant)
+        distances = get_nearest_distances(informant)
         #print(len(distances))
         #print(distances)
-        force = control_force(dt, distances, vectors)
+        force = control_force(dt, distances)
 
         #point.apply_force(force)
         point.set_dpose(force)
@@ -181,10 +176,13 @@ def process(dt, file):
         draw(points, axes='xz')
         plt.pause(0.01)
 
-        x, y, z = point.pose
-        file.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' ')
+        '''with open('logs/point_mass/robot_' + str(point.id + 1) + '.txt', 'a') as file:
+            x, y, z = point.pose
+            dx, dy, dz = point.dpose
+            d_x_plus, d_y_plus, d_z_plus, d_x_minus, d_y_minus, d_z_minus = distances
 
-    file.write('\n')
+            file.write(str(x) + ' ' + str(y) + ' ' + str(z) + ' ' + str(dx) + ' ' + str(dy) + ' ' + str(dz) + ' ' + str(d_x_plus) + ' ' + str(d_x_minus) + ' '+ str(d_y_plus) + ' ' + str(d_y_minus) + ' '+ str(d_z_plus) + ' ' + str(d_z_minus) + '\n')'''
+
 
 
 def main():
@@ -198,20 +196,16 @@ def main():
     moment_prev = time.time()
     running = True
     
-    with open("logs/log_1.txt", "w") as file:
-        while(running):
-            if keyboard.is_pressed('p'):
-                #running = False
-                print("p pressed")
+    while(running):
+        moment = time.time()
+        dt = moment - moment_prev
+        #print('dt = ' + str(dt))
 
-            moment = time.time()
-            dt = moment - moment_prev
+        if dt < 0.001:
+            continue
 
-            if dt < 0.001:
-                continue
-
-            process(dt, file)
-            moment_prev = moment
+        process(dt)
+        moment_prev = moment
 
 
 main()
