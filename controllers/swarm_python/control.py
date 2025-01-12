@@ -1,7 +1,7 @@
 import numpy as np
 import time
 
-U_MAX = 2.0
+U_MAX = 1.0
 
 
 def clamp(value):
@@ -12,6 +12,7 @@ def clamp(value):
             return U_MAX
         else:
             return value
+
 
 class PID:
     def __init__(self, dt=0.008, kp=1.0, kd=0.0, ki=0.0):
@@ -77,13 +78,9 @@ class SigmaControl:
                 return value
 
 
-    def get_u(self, e, d, id):
+    def get_u(self, e):
         k = 1
         u = (np.exp(e*k) - np.exp(-e*k)) / (np.exp(e*k) + np.exp(-e*k))
-
-        '''if abs(u - self.u_prev) > 1:
-            u = 0'''
-        
         
         thres = 0.07
         du = u - self.u_prev
@@ -114,3 +111,12 @@ class Sliding:
 
     def get_u(self, e):
         return self.k * self.sign(e)
+    
+
+class CustomController:
+    def __init__(self):
+        pass
+
+
+    def get_u(self, e):
+        return clamp(e)

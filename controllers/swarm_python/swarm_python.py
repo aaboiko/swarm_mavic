@@ -21,8 +21,8 @@ k_vertical_offset = 0.6
 k_vertical_p = 3.0
 k_roll_p = 50.0
 k_pitch_p = 30.0
-#k_roll_p = 10
-#k_pitch_p = 50
+k_roll_d = 2
+k_pitch_d = 1
 
 r_perception = np.inf
 x_anchor = np.array([3.0, 3.0, 5.0])                    
@@ -40,15 +40,15 @@ kp_alt = 2
 kd_alt = 0.0
 ki_alt = 0.0
 
-kp_roll = 1.0
+kp_roll = 3.0
 kd_roll = 0.0
 ki_roll = 0.0
 
-kp_pitch = 1.0
+kp_pitch = 3.0
 kd_pitch = 0.0
 ki_pitch = 0.0
 
-kp_yaw = 1
+kp_yaw = 3
 kd_yaw = 0.0
 ki_yaw = 0.0
 
@@ -140,7 +140,7 @@ def get_distances(informants):
     return distances, vectors
 
 
-def control_inputs(imu, altitude, distances, id, type="rp", controller="pid"):
+def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
     d_x_plus, d_y_plus, d_z_plus, d_x_minus, d_y_minus, d_z_minus = distances
     roll, pitch, yaw = imu
 
@@ -195,13 +195,13 @@ def control_inputs(imu, altitude, distances, id, type="rp", controller="pid"):
         e_pitch = -np.cos(e_yaw)
     
         if controller == "sigma":
-            roll_disturbance_ref = sigma_roll.get_u(e_roll, d_mean, id)
-            pitch_disturbance_ref = sigma_pitch.get_u(e_pitch, d_mean, id)
+            roll_disturbance_ref = sigma_roll.get_u(e_roll)
+            pitch_disturbance_ref = sigma_pitch.get_u(e_pitch)
         if controller == "pid":
             roll_disturbance_ref = pid_roll.get_u(e_roll)
             pitch_disturbance_ref = pid_pitch.get_u(e_pitch)
 
-        yaw_disturbance_ref = sigma_yaw.get_u(e_yaw, d_mean, id)
+        yaw_disturbance_ref = sigma_yaw.get_u(e_yaw)
 
         if id == 2:
             print('u_roll = ' + str(roll_disturbance_ref) + ', u_pitch = ' + str(pitch_disturbance_ref) + ', target_yaw = ' + str(target_yaw) + ', e_x = ' + str(e_x) + ', e_y= ' + str(e_y))
@@ -221,8 +221,8 @@ def get_motor_moments(imu, gyro, altitude, roll_disturbance, pitch_disturbance, 
     roll, pitch, yaw = imu
     roll_velocity, pitch_velocity, yaw_velocity = gyro
     
-    roll_input = k_roll_p * CLAMP(roll, -1.0, 1.0) + roll_velocity + roll_disturbance
-    pitch_input = k_pitch_p * CLAMP(pitch, -1.0, 1.0) + pitch_velocity + pitch_disturbance
+    roll_input = k_roll_p * CLAMP(roll, -1.0, 1.0) + k_roll_d * CLAMP(roll_velocity, -1.0, 1.0) + roll_disturbance
+    pitch_input = k_pitch_p * CLAMP(pitch, -1.0, 1.0) + k_pitch_d * CLAMP(pitch_velocity, -1.0, 1.0) + pitch_disturbance
     yaw_input = yaw_disturbance
     clamped_difference_altitude = CLAMP(target_altitude - altitude + k_vertical_offset, -1.0, 1.0)
     vertical_input = k_vertical_p * clamped_difference_altitude**3
@@ -382,6 +382,7 @@ def main(logging=False, log_id=1):
 
             key = keyboard.getKey()
 
+    
         front_left_motor_input, front_right_motor_input, rear_left_motor_input, rear_right_motor_input = get_motor_moments(imu_values, gyro_values, altitude, roll_disturbance, pitch_disturbance, yaw_disturbance, target_altitude)
 
         front_left_motor.setVelocity(front_left_motor_input)
