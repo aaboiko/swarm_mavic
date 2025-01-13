@@ -13,7 +13,7 @@ from controller import Keyboard
 from controller import LED
 from controller import Motor
 
-from control import PID, Sliding, SigmaControl
+from control import PID, Sliding, SigmaControl, CustomController
 
 #Global constants
 k_vertical_thrust = 68.5
@@ -21,8 +21,10 @@ k_vertical_offset = 0.6
 k_vertical_p = 3.0
 k_roll_p = 50.0
 k_pitch_p = 30.0
-k_roll_d = 2
-k_pitch_d = 1
+#k_roll_d = 5
+#k_pitch_d = 3
+k_roll_d = 20
+k_pitch_d = 12
 
 r_perception = np.inf
 x_anchor = np.array([3.0, 3.0, 5.0])                    
@@ -61,6 +63,11 @@ sigma_alt = SigmaControl(alt_disturbance_max)
 sigma_roll = SigmaControl(roll_disturbance_max)
 sigma_pitch = SigmaControl(pitch_disturbance_max)
 sigma_yaw = SigmaControl(yaw_disturbance_max)
+
+custom_alt = CustomController(alt_disturbance_max)
+custom_roll = CustomController(roll_disturbance_max)
+custom_pitch = CustomController(pitch_disturbance_max)
+custom_yaw = CustomController(yaw_disturbance_max)
 #################################
 
 def CLAMP(value, low, high):
@@ -140,7 +147,7 @@ def get_distances(informants):
     return distances, vectors
 
 
-def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
+def control_inputs(imu, altitude, distances, id, type="rpy", controller="pid"):
     d_x_plus, d_y_plus, d_z_plus, d_x_minus, d_y_minus, d_z_minus = distances
     roll, pitch, yaw = imu
 
@@ -172,7 +179,7 @@ def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
 
         print('e_x_plus = ' + str(e_x_plus) + ', e_x_minus = ' + str(e_x_minus) + ', e_y_plus = ' + str(e_y_plus) + ', e_y_minus = ' + str(e_y_minus) + ', target_yaw = ' + str(target_yaw) + ', yaw = ' + str(yaw) + ', e_yaw = ' + str(e_yaw) + ' e_pitch = ' + str(e_pitch) + ', dir : ' + str(direction))
 
-    if type == "rp":
+    if type == "rpy":
         e_x = e_x_plus - e_x_minus
         e_y = e_y_plus - e_y_minus
         target_yaw = np.arctan2(e_y, e_x)
@@ -189,10 +196,9 @@ def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
             e_yaw += 2 * np.pi
 
         d = np.sqrt(e_x**2 + e_y**2)
-        d_mean = (e_x_plus + e_x_minus + d_x_plus + d_x_minus) / 4
 
-        e_roll = np.sin(e_yaw)
-        e_pitch = -np.cos(e_yaw)
+        e_roll = np.sin(e_yaw) * max(d, 1)
+        e_pitch = -np.cos(e_yaw) * max(d, 1)
     
         if controller == "sigma":
             roll_disturbance_ref = sigma_roll.get_u(e_roll)
@@ -200,19 +206,17 @@ def control_inputs(imu, altitude, distances, id, type="rp", controller="sigma"):
         if controller == "pid":
             roll_disturbance_ref = pid_roll.get_u(e_roll)
             pitch_disturbance_ref = pid_pitch.get_u(e_pitch)
+        if controller == "custom":
+            roll_disturbance_ref = custom_roll.get_u(e_roll)
+            pitch_disturbance_ref = custom_pitch.get_u(e_pitch)
 
         yaw_disturbance_ref = sigma_yaw.get_u(e_yaw)
 
         if id == 2:
             print('u_roll = ' + str(roll_disturbance_ref) + ', u_pitch = ' + str(pitch_disturbance_ref) + ', target_yaw = ' + str(target_yaw) + ', e_x = ' + str(e_x) + ', e_y= ' + str(e_y))
-
         #print('e_x_plus = ' + str(e_x_plus) + ', e_x_minus = ' + str(e_x_minus) + ', e_y_plus = ' + str(e_y_plus) + ', e_y_minus = ' + str(e_y_minus) + ', target_yaw = ' + str(target_yaw) + ', yaw = ' + str(yaw) + ', e_yaw = ' + str(e_yaw) + ' e_pitch = ' + str(e_pitch) + ', e_roll = ' + str(e_roll))
     
-    if type == "alt":
-        pass
-    
     altitude_ref = altitude + pid_alt.get_u(e_z_plus) - pid_alt.get_u(e_z_minus)
-    #altitude_ref = altitude + sigma_alt.get_u(e_z_plus - e_z_minus, d_mean, id)
 
     return roll_disturbance_ref, pitch_disturbance_ref, yaw_disturbance_ref, altitude_ref
         

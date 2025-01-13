@@ -1,7 +1,7 @@
 import numpy as np
 import time
 
-U_MAX = 1.0
+U_MAX = 2.0
 
 
 def clamp(value):
@@ -82,13 +82,13 @@ class SigmaControl:
         k = 1
         u = (np.exp(e*k) - np.exp(-e*k)) / (np.exp(e*k) + np.exp(-e*k))
         
-        thres = 0.07
+        thres = 0.05
         du = u - self.u_prev
 
-        if du > thres:
+        '''if du > thres:
             u = self.u_prev + thres
         if -du > thres:
-            u = self.u_prev - thres
+            u = self.u_prev - thres'''
         
         self.e_integral += e
         self.e_prev = e
@@ -114,9 +114,20 @@ class Sliding:
     
 
 class CustomController:
-    def __init__(self):
-        pass
+    def __init__(self, max_value):
+        self.max_value = max_value
+
+
+    def clamp(self, value):
+        if value < -self.max_value:
+            return -self.max_value
+        else:
+            if value > self.max_value:
+                return self.max_value
+            else:
+                return value
 
 
     def get_u(self, e):
-        return clamp(e)
+
+        return self.clamp(u)

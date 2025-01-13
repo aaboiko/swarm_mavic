@@ -25,7 +25,7 @@ k_yaw_d = 0.0
 U_ROLL = 2.0
 U_PITCH = 2.0
 U_YAW = 1.3
-FREQ = 2.5
+FREQ = 1.75
 
 
 def CLAMP(value, low, high):
@@ -115,7 +115,7 @@ def main(logging=False, log_id=1):
 
         if robot.getTime() > 5.0:
             roll_disturbance, pitch_disturbance, yaw_disturbance = chatter(time, roll=False, pitch=True, yaw=False)
-            pitch_disturbance = u(pitch_disturbance)
+            #pitch_disturbance = u(pitch_disturbance)
 
             if logging:
                 roll, pitch, yaw = imu_values
