@@ -101,16 +101,6 @@ def control_inputs(imu, altitude, distances, id):
     e_z_plus = d_z_plus - w
     e_z_minus = d_z_minus - w
 
-    e_x = e_x_plus - e_x_minus
-    e_y = e_y_plus - e_y_minus
-    target_yaw = np.arctan2(e_y, e_x)
-    e_yaw = target_yaw - yaw
-
-    if e_yaw > np.pi:
-        e_yaw -= 2 * np.pi
-    if e_yaw < -np.pi:
-        e_yaw += 2 * np.pi
-
     vx = u(e_x_plus) - u(e_x_minus)
     vy = u(e_y_plus) - u(e_y_minus)
     altitude_ref = altitude + u(e_z_plus) - u(e_z_minus)
@@ -220,9 +210,9 @@ def main(logging=False, log_id=1):
                 translation = np.array(node.getField('translation').getSFVec3f())
                 vec = translation - x_cur
 
-                if robot.getTime() > 30.0:
+                if robot.getTime() > 25.0:
                     print('r_perception reduced!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                    r_perc = 0.6
+                    r_perc = 0.9
                 else:
                     r_perc = r_perception
 

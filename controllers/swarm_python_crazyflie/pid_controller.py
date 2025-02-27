@@ -69,8 +69,6 @@ class PID:
         self.altitude_desired = altitude_desired
         self.vx_desired = vx_desired
         self.vy_desired = vy_desired
-        #print('actual state: roll = ' + str(roll) + ', pitch = ' + str(pitch) + ', yaw = ' + str(yaw) + ', dyaw = ' + str(dyaw) + ', alt = ' + str(altitude) + ', vx = ' + str(vx) + ', vy = ' + str(vy))
-        #print('desired state: alt_ref = ' + str(altitude_ref) + ', vx = ' + str(vx_ref) + ', vy = ' + str(vy_ref) + ', dyaw = ' + str(yaw_ref))
 
         self.horizontal_velocity_controller(vx, vy)
         self.fixed_height_controller(altitude)
@@ -78,20 +76,6 @@ class PID:
         m1, m2, m3, m4 = self.motor_mixing()
 
         return m1, m2, m3, m4
-    
-
-    def get_u(self, actual_state, desired_state):
-        roll, pitch, dyaw, altitude, vx, vy = actual_state
-
-        roll_desired, pitch_desired, dyaw_desired, altitude_desired, vx_desired, vy_desired = desired_state
-        self.roll_desired = roll_desired
-        self.pitch_desired = pitch_desired
-        self.dyaw_desired = dyaw_desired
-        self.altitude_desired = altitude_desired
-        self.vx_desired = vx_desired
-        self.vy_desired = vy_desired
-
-
 
 
     def horizontal_velocity_controller(self, vx, vy):

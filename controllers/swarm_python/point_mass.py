@@ -9,6 +9,10 @@ class PointMass:
         self.ddpose = np.zeros(3)
         self.force = np.zeros(3)
 
+        self.has_peer = False
+        self.peer_state = 0
+        self.prior_knowledge = np.zeros(3)
+
 
     def apply_force(self, force):
         self.force = force
@@ -40,3 +44,26 @@ class PointsHandler:
             points.append(point)
 
         self.points = points
+
+
+    def __getitem__(self, index): 
+        return self.points[index]
+    
+
+class Anchor:
+    def __init__(self, init_pose, id=0):
+        self.id = id
+        self.pose = init_pose
+        self.dpose = np.zeros(3)
+        self.ddpose = np.zeros(3)
+        self.trajectory = []
+        self.traj_point = 0
+
+
+    def set_trajectory(self, trajectory):
+        self.trajectory = trajectory
+
+
+    def step(self):
+        self.pose = self.trajectory[self.traj_point]
+        self.traj_point = (self.traj_point + 1) % len(self.trajectory)
