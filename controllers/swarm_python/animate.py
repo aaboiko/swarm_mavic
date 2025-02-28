@@ -21,7 +21,7 @@ data = []
 fig, ax = plt.subplots()
 x_anchor = np.array([0.0, 0.0, 1.0])
 R_vis = 2.0   
-traj_len = 1200
+traj_len = 2400
 
 
 def animate(i):
@@ -42,7 +42,37 @@ def animate(i):
             plt.scatter(x, z, s=10, color='blue')
 
 
-def animate_1(i):
+def animate_1_xy(i):
+    with open(traj_path, "r") as traj_file:
+        traj_lines = [traj_line for traj_line in traj_file]
+
+    
+    print(f"animate: {i}/{len(data)}")
+    nums = data[i]
+    points = np.array(nums).reshape(-1, 10)
+    anchor_pose = [float(item) for item in traj_lines[i % traj_len].rstrip().split(' ')]
+    x_anc, y_anc, z_anc = anchor_pose
+    circle_colors = ["blue", "green", "red"]
+    plt.clf()
+
+    plt.xlim((-5, 5))
+    plt.ylim((-5, 5))
+
+    plt.gca().set_aspect('equal', adjustable='box')
+
+    plt.scatter(x_anc, y_anc, s=s_anchor, color="red")
+
+    for point in points:
+        x, y, z, dx, dy, dz, ux, uy, uz, peer_state = point
+        circle_color = circle_colors[int(peer_state)]
+
+        plt.scatter(x, y, s=s_point, color="blue")
+        circle = Circle(xy=(x, y), radius=R_vis, color=circle_color, alpha=0.2)
+
+        plt.gca().add_artist(circle)
+
+
+def animate_1_xz(i):
     with open(traj_path, "r") as traj_file:
         traj_lines = [traj_line for traj_line in traj_file]
 
@@ -60,14 +90,14 @@ def animate_1(i):
 
     plt.gca().set_aspect('equal', adjustable='box')
 
-    plt.scatter(x_anc, y_anc, s=s_anchor, color="red")
+    plt.scatter(x_anc, z_anc, s=s_anchor, color="red")
 
     for point in points:
         x, y, z, dx, dy, dz, ux, uy, uz, peer_state = point
         circle_color = circle_colors[int(peer_state)]
 
-        plt.scatter(x, y, s=s_point, color="blue")
-        circle = Circle(xy=(x, y), radius=R_vis, color=circle_color, alpha=0.2)
+        plt.scatter(x, z, s=s_point, color="blue")
+        circle = Circle(xy=(x, z), radius=R_vis, color=circle_color, alpha=0.2)
 
         plt.gca().add_artist(circle)
 
@@ -85,13 +115,13 @@ def create_gif(log_path, gif_path):
                  break
 
     # создаем анимацию
-    anim = animation.FuncAnimation(fig, animate_1,  frames = len(data), interval = len(data))
+    anim = animation.FuncAnimation(fig, animate_1_xz,  frames = len(data), interval = len(data))
     # сохраняем анимацию в формате GIF в папку со скриптом
     anim.save(gif_path, fps = 20, writer = 'pillow')
 
 
 log_path = "logs/point_mass/log_acc_4.txt"
-gif_path = "gifs/gif_acc_xy_4.gif"
+gif_path = "gifs/gif_acc_xz_4.gif"
 traj_path = "logs/trajs/circle_xy.txt"
 
 create_gif(log_path, gif_path)

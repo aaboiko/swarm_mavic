@@ -6,12 +6,19 @@ kd_att_y = 0.5
 kp_att_rp = 0.5
 kd_att_rp = 0.1
 
-kp_vel_xy = 2
+'''kp_vel_xy = 2
 kd_vel_xy = 0.5
 
 kp_z = 4
 ki_z = 0.1
-kd_z = 0.0
+kd_z = 0.0'''
+
+kp_vel_xy = 4
+kd_vel_xy = 1
+
+kp_z = 12
+ki_z = 0.3
+kd_z = 7
 
 kp_yaw = 1.0
 
@@ -30,6 +37,7 @@ class PID:
         self.altitude_desired = 1.0
         self.vx_desired = 0
         self.vy_desired = 0
+        self.altitude_speed_desired = 0.0
 
         self.roll_command = 0
         self.pitch_command = 0
@@ -37,6 +45,7 @@ class PID:
         self.altitude_command = 0
 
         self.pastAltitudeError = 0
+        self.pastAltitudeSpeedError = 0
         self.pastYawRateError = 0
         self.pastPitchError = 0
         self.pastRollError = 0
@@ -44,9 +53,12 @@ class PID:
         self.pastVxError = 0
         self.pastVyError = 0
         self.altitudeIntegrator = 0
+        self.altitudeSpeedIntegrator = 0
 
         self.pastX = 0
         self.pastY = 0
+        self.pastZ = 0
+        self.pastAltitude = 0
 
 
     def get_vxy_global(self, x, y):
@@ -57,6 +69,18 @@ class PID:
         self.pastY = y
 
         return vx, vy
+    
+
+    def get_vxyz_global(self, x, y, z):
+        vx = (x - self.pastX) / self.dt
+        vy = (y - self.pastY) / self.dt
+        vz = (z - self.pastZ) / self.dt
+
+        self.pastX = x
+        self.pastY = y
+        self.pastZ = z
+
+        return vx, vy, vz
 
 
     def controller(self, actual_state, desired_state):
@@ -67,11 +91,13 @@ class PID:
         self.pitch_desired = pitch_desired
         self.dyaw_desired = dyaw_desired
         self.altitude_desired = altitude_desired
+        self.altitude_speed_desired = altitude_desired
         self.vx_desired = vx_desired
         self.vy_desired = vy_desired
 
         self.horizontal_velocity_controller(vx, vy)
         self.fixed_height_controller(altitude)
+        #self.elevation_controller(altitude)
         self.attitude_controller(roll, pitch, dyaw)
         m1, m2, m3, m4 = self.motor_mixing()
 
@@ -107,7 +133,17 @@ class PID:
         self.pastAltitudeError = altitudeError
 
         #print('alt_cmd = ' + str(altitude_command) + ', alt_integrator = ' + str(self.altitudeIntegrator))
-        
+
+
+    def elevation_controller(self, altitude):
+        altitude_speed = (altitude - self.pastAltitude) / self.dt
+        altitudeSpeedError = self.altitude_speed_desired - altitude_speed
+        altitudeSpeedDerivativeError = (altitudeSpeedError - self.pastAltitudeSpeedError) / self.dt
+
+        self.altitudeSpeedIntegrator += altitudeSpeedError * self.dt
+        self.altitude_speed_command = kp_z * constrain(altitudeSpeedError, -1, 1) + kd_z * altitudeSpeedDerivativeError + ki_z * self.altitudeSpeedIntegrator + 48
+        self.pastAltitudeSpeedError = altitudeSpeedError
+        self.pastAltitude = altitude
     
 
     def attitude_controller(self, roll, pitch, dyaw):

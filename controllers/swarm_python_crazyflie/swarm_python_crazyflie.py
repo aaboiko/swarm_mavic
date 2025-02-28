@@ -194,8 +194,6 @@ def main(logging=False, log_id=1):
         vx = vx_global * np.cos(yaw) + vy_global * np.sin(yaw)
         vy = -vx_global * np.sin(yaw) + vy_global * np.cos(yaw)
 
-        desired_altitude = target_altitude
-
         forward_desired = 0
         sideways_desired = 0
         yaw_desired = 0
@@ -252,8 +250,8 @@ def main(logging=False, log_id=1):
 
                     key = keyboard.getKey()
 
-                desired_altitude += height_diff_desired * dt
-                desired_state = [0, 0, yaw_desired, desired_altitude, forward_desired, sideways_desired]
+                target_altitude += height_diff_desired * dt
+                desired_state = [0, 0, yaw_desired, target_altitude, forward_desired, sideways_desired]
 
             #Logging the robot`s parameters
             if logging:

@@ -54,7 +54,7 @@ def main():
 
     print("Starting the drone...\n")
 
-    target_altitude = 1.0
+    target_altitude = 3.0
 
     while robot.step(timestep) != -1:
         time = robot.getTime()
@@ -67,8 +67,6 @@ def main():
         vx_global, vy_global = controller.get_vxy_global(x, y)
         vx = vx_global * np.cos(yaw) + vy_global * np.sin(yaw)
         vy = -vx_global * np.sin(yaw) + vy_global * np.cos(yaw)
-
-        desired_altitude = target_altitude
 
         forward_desired = 0
         sideways_desired = 0
@@ -91,14 +89,14 @@ def main():
             elif key == ord('E'):
                 yaw_desired = -1.0
             elif key == ord('W'):
-                height_diff_desired = 0.1
+                height_diff_desired = 1.0
             elif key == ord('S'):
-                height_diff_desired = -0.1
+                height_diff_desired = -1.0
 
             key = keyboard.getKey()
 
-        desired_altitude += height_diff_desired * dt
-        desired_state = [0, 0, yaw_desired, desired_altitude, forward_desired, sideways_desired]
+        target_altitude += height_diff_desired * dt
+        desired_state = [0, 0, yaw_desired, target_altitude, forward_desired, sideways_desired]
        
         actual_state = [roll, pitch, dyaw, altitude, vx, vy]
         m1, m2, m3, m4 = controller.controller(actual_state, desired_state)

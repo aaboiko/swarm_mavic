@@ -1,0 +1,60 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/Floor.proto"
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/bitcraze/crazyflie/protos/Crazyflie.proto"
+
+
+WorldInfo {
+  info [
+    "This demonstration shows a DJI Mavic 2 PRO flying over a rural area."
+    "After the drone has taken off, you can control it with the keyboard of your computer."
+  ]
+  title "Crazyflie swarm"
+  basicTimeStep 8
+  defaultDamping Damping {
+    linear 0.5
+    angular 0.5
+  }
+}
+
+Viewpoint {
+  orientation -0.03132509357312057 -0.004229724205027985 0.9995002991224087 2.901671340011777
+  position 3.392036511082617 -0.9278446049316036 0.7513423909480075
+  near 0.2
+  follow "Crazyflie"
+  followSmoothness 0.2
+}
+TexturedBackground {
+  luminosity 3
+}
+
+TexturedBackgroundLight {
+}
+
+Floor {
+  translation 0 -4.22 0
+  rotation 1 0 0 0
+  size 20 16.4
+  tileSize 1 1
+  appearance PBRAppearance {
+    baseColorMap ImageTexture {
+      url [
+        "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/default/worlds/textures/asphalt.jpg"
+      ]
+    }
+    roughness 1
+    metalness 0
+  }
+}
+
+
+Crazyflie {
+  translation 0 0 0.015
+  rotation 0 0 1 0
+  controller "crazyflie_acc_test"
+  supervisor TRUE
+  name "robot_1"
+}
