@@ -21,7 +21,17 @@ from controller import Motor
 R_vis = 1.0
 w = 0.5
 anchor_id = 1
-u_max = 0.3
+u_max = 0.4
+
+
+def ode_iteration(f, x, t, dt, *args):
+    k = dt
+    k1 = k * f(t, x, *args)
+    k2 = k * f(t + 0.5*k, x + 0.5*k1, *args)
+    k3 = k * f(t + 0.5*k, x + 0.5*k2, *args)
+    k4 = k * f(t + dt, x + k3, *args)
+
+    return x + 1/6. * (k1 + 2 * k2 + 2 * k3 + k4)
 
 
 def sign(x):
@@ -107,6 +117,15 @@ def get_nearest_distances(peers, anchor_dir):
                 distances.append(R_vis)
         else:
             distances.append(mins[i])
+    
+    '''for i in range(6):
+        if ids[i] == -1:
+            if i == 2 or i == 5:
+                distances.append(w)
+            else:
+                distances.append(0)
+        else:
+            distances.append(mins[i])'''
     
     return distances
 
@@ -230,9 +249,11 @@ def main(logging=False, log_id=1):
                 signs = [sign(x_to_anchor), sign(y_to_anchor), sign(z_to_anchor), -sign(x_to_anchor), -sign(y_to_anchor), -sign(z_to_anchor)]
 
                 distances = get_nearest_distances(peers, signs)
+                
                 forward_acc_desired, sideways_acc_desired, target_altitude_acc = control_force(distances, dpose_global)
                 #print(f"{forward_acc_desired} {sideways_acc_desired} {target_altitude_acc}")
             else:
+                vec_to_anchor = np.zeros(3)
                 key = keyboard.getKey()
 
                 while key > 0:
@@ -253,6 +274,9 @@ def main(logging=False, log_id=1):
             
             target_altitude_speed += target_altitude_acc * dt
             target_altitude += target_altitude_speed * dt + 0.5 * target_altitude_acc * dt**2
+            #target_altitude_speed += ode_iteration(dt, target_altitude_acc, target_altitude_speed, time)
+            #target_altitude += ode_iteration(dt, target_altitude_speed, target_altitude, time)
+
             forward_desired += forward_acc_desired * dt
             sideways_desired += sideways_acc_desired * dt
 
@@ -260,7 +284,8 @@ def main(logging=False, log_id=1):
             #desired_state = [0, 0, yaw_desired, target_altitude_speed, forward_desired, sideways_desired]
 
             if logging:
-                line = f"{x} {y} {altitude} {vx_global} {vy_global} {vz_global} {roll} {pitch} {yaw} {droll} {dpitch} {dyaw} {forward_acc_desired} {sideways_acc_desired} {target_altitude_acc}\n"
+                d_to_anchor = np.linalg.norm(vec_to_anchor)
+                line = f"{x} {y} {altitude} {vx_global} {vy_global} {vz_global} {roll} {pitch} {yaw} {droll} {dpitch} {dyaw} {forward_acc_desired} {sideways_acc_desired} {target_altitude_acc} {vec_to_anchor[0]} {vec_to_anchor[1]} {vec_to_anchor[2]} {d_to_anchor}\n"
                 file.write(line)
         else:
             desired_state = [0, 0, 0, target_altitude, 0, 0]

@@ -16,9 +16,9 @@ kd_z = 0.0'''
 kp_vel_xy = 4
 kd_vel_xy = 1
 
-kp_z = 12
+kp_z = 18
 ki_z = 0.3
-kd_z = 7
+kd_z = 11
 
 kp_yaw = 1.0
 
