@@ -1,7 +1,7 @@
 import numpy as np
 
 class PointMass:
-    def __init__(self, id=0, mass=1.0, x=0, y=0, z=0):
+    def __init__(self, id=0, mass=1.0, x=0, y=0, z=0, is_alive=True):
         self.id = id
         self.mass = mass
         self.pose = np.array([x, y, z])
@@ -12,6 +12,7 @@ class PointMass:
         self.has_peer = False
         self.peer_state = 0
         self.prior_knowledge = np.zeros(3)
+        self.is_alive = is_alive
 
 
     def apply_force(self, force):
@@ -20,6 +21,15 @@ class PointMass:
 
     def set_dpose(self, dpose):
         self.dpose = dpose
+
+
+    def kill(self):
+        self.is_alive = False
+        self.pose = np.zeros(3)
+
+
+    def resurrect(self):
+        self.is_alive = True
 
 
     def step(self, dt):

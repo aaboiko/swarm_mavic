@@ -5,6 +5,7 @@ import matplotlib.animation as animation
 from utils import PointAgent, Anchor
 from matplotlib.patches import Circle
 from mpl_toolkits import mplot3d
+from tqdm import tqdm
 
 
 N_AGENTS_IN_FAMILY = 2
@@ -88,8 +89,7 @@ def process():
 
     n_iters = 10000
 
-    while n_iters > 0:
-        n_iters -= 1
+    for i in tqdm(range(n_iters)):
         print(f"iters left: {n_iters}")
 
         write_log(log_path_agents, agents)
@@ -216,8 +216,6 @@ def animate_xy(i):
 
 
 def animate_xz(i):
-    print(f"animate: {i}/{n_frames}")
-
     circle_colors = ["blue", "green", "red"]
     plt.clf()
 
@@ -272,11 +270,11 @@ def create_gif(log_path_agents, log_path_anchors, gif_path, flag="xy"):
             fig, ax = plt.subplots()
 
         if flag == "xy":
-            anim = animation.FuncAnimation(fig, animate_xy, frames = range(0, n_frames, 4), interval = 20)
+            anim = animation.FuncAnimation(fig, animate_xy, frames = tqdm(range(0, n_frames, 4)), interval = 20)
         if flag == "xz":
-            anim = animation.FuncAnimation(fig, animate_xz, frames = range(0, n_frames, 4), interval = 20)
+            anim = animation.FuncAnimation(fig, animate_xz, frames = tqdm(range(0, n_frames, 4)), interval = 20)
         if flag == "3d":
-            anim = animation.FuncAnimation(fig_3d, animate_3d, frames = range(0, n_frames, 12), interval = 20)
+            anim = animation.FuncAnimation(fig_3d, animate_3d, frames = tqdm(range(0, n_frames, 12)), interval = 20)
 
         anim.save(gif_path, fps = 60, writer = 'pillow')
 
@@ -334,7 +332,6 @@ def animate_from_log_3d(log_path_agents, log_path_anchors):
 
 
 def animate_3d(i):
-    print(f"animate: {i}/{n_frames}")
     ax_3d.clear()
 
     ax_3d.set_xlabel('x')
