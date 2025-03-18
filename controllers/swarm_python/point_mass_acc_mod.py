@@ -8,7 +8,10 @@ from tqdm import tqdm
 from functools import partial
 
 N_POINTS = 7
-scene_name = "scene_3"
+N_ADDITIONAL_POINTS = 0
+
+n_params = 12
+scene_name = "scene_4"
 
 log_path = f"logs/point_mass/log_{scene_name}.txt"
 
@@ -180,6 +183,8 @@ def write_log(path, points):
 
 
 def process(anchor_traj_path="logs/trajs/static.txt"):
+    print('processing...')
+
     '''points = [
         PointMass(id=0, x=-2, y=-2, z=int(np.random.uniform(2, 11))),
         PointMass(id=1, x=-2, y=2, z=int(np.random.uniform(2, 11))),
@@ -189,9 +194,10 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
 
     points = [PointMass(id=i, x=np.random.uniform(x_min, x_max), y=np.random.uniform(y_min, y_max), z=np.random.uniform(z_min, z_max)) for i in range(N_POINTS)]
 
-    points.append(PointMass(id=N_POINTS, x=20, y=20, z=5))
-    points.append(PointMass(id=N_POINTS+1, x=20, y=20, z=7))
-    points.append(PointMass(id=N_POINTS+2, x=20, y=20, z=10))
+    points.append(PointMass(id=N_POINTS, x=10, y=10, z=5, is_alive=False))
+    points.append(PointMass(id=N_POINTS+1, x=10, y=10, z=7, is_alive=False))
+    points.append(PointMass(id=N_POINTS+2, x=10, y=10, z=10, is_alive=False))
+    points.append(PointMass(id=N_POINTS+3, x=10, y=10, z=11, is_alive=False))
 
     anchor = Anchor(np.array([0, 0, 1]))
     anchor_traj = []
@@ -211,7 +217,7 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
     flag = False
 
     for iter in tqdm(range(n_iters)):
-        if iter == 2500:
+        if iter == 4000:
             flag = True
 
         write_log(log_path, points)
@@ -220,8 +226,8 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
             '''if flag and (point.id == 0 or point.id == 3 or point.id == 7):
                 point.kill()'''
             
-            '''if flag and (point.id == N_POINTS or point.id == N_POINTS + 1 or point.id == N_POINTS + 2):
-                point.resurrect()'''
+            if flag and (point.id == N_POINTS or point.id == N_POINTS + 1 or point.id == N_POINTS + 2 or point.id == N_POINTS + 3):
+                point.resurrect()
 
             if point.is_alive:
                 peers, p_state = get_peers(points, point, anchor.pose)
@@ -263,7 +269,7 @@ def animate_from_log(log_path, traj_path, axes="xy"):
             print(f"line number: {line_num}")
 
             nums = [float(item) for item in line.rstrip().split(' ')]
-            points = np.array(nums).reshape(-1, 12)
+            points = np.array(nums).reshape(-1, n_params)
             anchor_pose = [float(item) for item in traj_lines[line_num % traj_len].rstrip().split(' ')]
             x_anc, y_anc, z_anc = anchor_pose
             circle_colors = ["blue", "green", "red"]
@@ -313,7 +319,7 @@ def animate_xy(i, traj_path=""):
         traj_lines = [traj_line for traj_line in traj_file]
 
     nums = data[i]
-    points = np.array(nums).reshape(-1, 12)
+    points = np.array(nums).reshape(-1, n_params)
     anchor_pose = [float(item) for item in traj_lines[i % traj_len].rstrip().split(' ')]
     x_anc, y_anc, z_anc = anchor_pose
     circle_colors = ["blue", "green", "red"]
@@ -345,7 +351,7 @@ def animate_xz(i, traj_path=""):
         traj_lines = [traj_line for traj_line in traj_file]
 
     nums = data[i]
-    points = np.array(nums).reshape(-1, 12)
+    points = np.array(nums).reshape(-1, n_params)
     anchor_pose = [float(item) for item in traj_lines[i % traj_len].rstrip().split(' ')]
     x_anc, y_anc, z_anc = anchor_pose
     circle_colors = ["blue", "green", "red"]
@@ -372,10 +378,7 @@ def animate_xz(i, traj_path=""):
             plt.gca().add_artist(circle)
 
 
-def animate_3d(i, traj_path=""):
-    with open(traj_path, "r") as traj_file:
-        traj_lines = [traj_line for traj_line in traj_file]
-
+def animate_3d(i, traj_lines=[]):
     ax_3d.clear()
 
     ax_3d.set_xlabel('x')
@@ -390,7 +393,7 @@ def animate_3d(i, traj_path=""):
     circle_colors = ["blue", "green", "red"]
     nums = data[i]
 
-    agents = np.array(nums).reshape(-1, 12)
+    agents = np.array(nums).reshape(-1, n_params)
     anchor_pose = [float(item) for item in traj_lines[i % traj_len].rstrip().split(' ')]
     x_anc, y_anc, z_anc = anchor_pose
     ax_3d.scatter(x_anc, y_anc, z_anc, s=s_anchor, color="red")
@@ -407,7 +410,11 @@ def animate_3d(i, traj_path=""):
 
 
 def create_gif(log_path, gif_path, traj_path, flag="xy", frame_step=4):
+    print(f"creating gif {gif_path}")
     iters = 0
+
+    with open(traj_path, "r") as traj_file:
+        traj_lines = [traj_line for traj_line in traj_file]
 
     with open(log_path, "r") as file:
         lines = [line for line in file]
@@ -428,12 +435,14 @@ def create_gif(log_path, gif_path, traj_path, flag="xy", frame_step=4):
         if flag == "xz":
             anim = animation.FuncAnimation(fig, partial(animate_xz, traj_path=traj_path), frames = tqdm(range(0, n_frames, frame_step)), interval = 20)
         if flag == "3d":
-            anim = animation.FuncAnimation(fig_3d, partial(animate_3d, traj_path=traj_path), frames = tqdm(range(0, n_frames, frame_step)), interval = 20)
+            anim = animation.FuncAnimation(fig_3d, partial(animate_3d, traj_lines=traj_lines), frames = tqdm(range(0, 6000, frame_step)), interval = 20)
 
         anim.save(gif_path, fps = 60, writer = 'pillow')
 
 
 def plot_graph_z(log_path, traj_path, graph_path):
+    print(f"plotting graph: {graph_path}")
+
     with open(log_path, "r") as file, open(traj_path, "r") as traj_file:
         line_num = 0
         traj_lines = [traj_line for traj_line in traj_file]
@@ -444,7 +453,7 @@ def plot_graph_z(log_path, traj_path, graph_path):
             ts.append(t)
 
             nums = [float(item) for item in line.rstrip().split(' ')]
-            points = np.array(nums).reshape(-1, 12)
+            points = np.array(nums).reshape(-1, n_params)
             anchor_pose = [float(item) for item in traj_lines[line_num % traj_len].rstrip().split(' ')]
             x_anc, y_anc, z_anc = anchor_pose
             circle_colors = ["blue", "green", "red"]
@@ -460,7 +469,7 @@ def plot_graph_z(log_path, traj_path, graph_path):
 
             zs.append(pzs)
 
-        for i in range(N_POINTS):
+        for i in range(N_POINTS + N_ADDITIONAL_POINTS):
             plt.plot(ts, np.array(zs)[:,i].tolist(), color=points_colors[i])
 
         plt.xlabel('t', fontsize=14)
@@ -473,6 +482,8 @@ def plot_graph_z(log_path, traj_path, graph_path):
 
 
 def plot_graph_xy(log_path, traj_path, graph_path):
+    print(f"plotting graph: {graph_path}")
+
     with open(log_path, "r") as file, open(traj_path, "r") as traj_file:
         line_num = 0
         traj_lines = [traj_line for traj_line in traj_file]
@@ -483,7 +494,7 @@ def plot_graph_xy(log_path, traj_path, graph_path):
             ts.append(t)
 
             nums = [float(item) for item in line.rstrip().split(' ')]
-            points = np.array(nums).reshape(-1, 12)
+            points = np.array(nums).reshape(-1, n_params)
             anchor_pose = [float(item) for item in traj_lines[line_num % traj_len].rstrip().split(' ')]
             x_anc, y_anc, z_anc = anchor_pose
             circle_colors = ["blue", "green", "red"]
@@ -501,7 +512,7 @@ def plot_graph_xy(log_path, traj_path, graph_path):
 
             ds.append(pds)
 
-        for i in range(N_POINTS):
+        for i in range(N_POINTS + N_ADDITIONAL_POINTS):
             plt.plot(ts, np.array(ds)[:,i].tolist(), color=points_colors[i])
 
         plt.xlabel('t', fontsize=14)
@@ -513,28 +524,14 @@ def plot_graph_xy(log_path, traj_path, graph_path):
         plt.show()
 
 
-def check_traj(traj_path):
-    with open(traj_path, "r") as file:
-        lines = [line for line in file]
+current_traj_path = traj_path_circle_skew
 
-        for line in tqdm(lines[0:-1:100]):
-            nums = [float(item) for item in line.rstrip().split(' ')]
-            x, y, z = nums
-            ax_3d.scatter(x, y, z, s=s_point, color="blue")
+#process(anchor_traj_path=current_traj_path)
+#animate_from_log(log_path, current_traj_path, axes="xy")
 
-        ax_3d.set_xlim(x_bounds)
-        ax_3d.set_ylim(y_bounds)
-        ax_3d.set_zlim(z_bounds)
+#create_gif(log_path, gif_path_xz, current_traj_path, flag="xz", frame_step=10)
+#create_gif(log_path, gif_path_xy, current_traj_path, flag="xy", frame_step=10)
+#create_gif(log_path, gif_path_3d, current_traj_path, flag="3d", frame_step=15)
 
-        plt.show()
-
-
-process(anchor_traj_path=traj_path_circle_skew)
-#animate_from_log(log_path, traj_path_static, axes="xy")
-
-create_gif(log_path, gif_path_xy, traj_path_circle_skew, flag="xy", frame_step=20)
-create_gif(log_path, gif_path_xz, traj_path_circle_skew, flag="xz", frame_step=20)
-create_gif(log_path, gif_path_3d, traj_path_circle_skew, flag="3d", frame_step=20)
-
-plot_graph_z(log_path, traj_path_circle_skew, graph_path_z)
-plot_graph_xy(log_path, traj_path_circle_skew, graph_path_xy)
+#plot_graph_z(log_path, current_traj_path, graph_path_z)
+#plot_graph_xy(log_path, current_traj_path, graph_path_xy)

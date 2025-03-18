@@ -1,9 +1,10 @@
 import numpy as np
 
 class PointMass:
-    def __init__(self, id=0, family_id=0, mass=1.0, x=0, y=0, z=0, u_max=0.5, R_vis=1.0):
+    def __init__(self, id=0, family_id=0, mass=1.0, x=0, y=0, z=0, u_max=0.5, R_vis=1.0, is_alive=True):
         self.id=id
         self.family_id = family_id
+        self.is_alive = is_alive
 
         self.mass = mass
         self.pose = np.array([x, y, z])
@@ -202,3 +203,35 @@ class Anchor(PointMass):
         force = self.control_force(distances)
         self.apply_force(force)
         self.step(dt)
+
+
+class AnchorPredefined:
+    def __init__(self, id=0, family_id=0, x=0, y=0, z=0, is_alive=True, trajectory=[]):
+        self.id = id
+        self.family_id = family_id
+        self.is_alive = is_alive
+        self.R_vis = 0
+
+        self.pose = np.array([x, y, z])
+        self.dpose = np.zeros(3)
+        self.ddpose = np.zeros(3)
+        self.trajectory = trajectory
+        self.traj_point = 0
+
+
+    def set_trajectory(self, trajectory):
+        self.trajectory = trajectory
+
+
+    def step(self):
+        self.pose = self.trajectory[self.traj_point]
+        self.traj_point = (self.traj_point + 1) % len(self.trajectory)
+
+
+class AnchorStatic:
+    def __init__(self, id=0, family_id=0, x=0, y=0, z=0, is_alive=True):
+        self.id = id
+        self.family_id = family_id
+        self.R_vis = 0
+        self.is_alive = is_alive
+        self.pose = np.array([x, y, z])
