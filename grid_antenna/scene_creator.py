@@ -121,9 +121,39 @@ def sliding_line(traj_path, n_agents):
             file.write(line + "\n")
 
 
-#spinning_line(traj_path_spinning_line, 1, 10)
-#static_sin(traj_path_static_sin, 13)
-sliding_line(traj_path_sliding_line, 10)
+def chain_initialization(n_agents, R_vis, R_min, sigma_alpha, sigma_beta, x_anchor=0, y_anchor=0, z_anchor=0, show=True):
+    points = []
+    cur_x, cur_y, cur_z = x_anchor, y_anchor, z_anchor
 
-check_traj(traj_path_sliding_line)
+    for i in range(n_agents):
+        interval = np.random.uniform(R_min, R_vis)
+        alpha = np.random.normal(0, sigma_alpha**2)
+        beta = np.random.normal(0, sigma_beta**2)
+
+        x = cur_x + interval * np.sin(beta)
+        y = cur_y - interval * np.sin(alpha) * np.cos(beta)
+        z = cur_z + interval * np.cos(alpha) * np.cos(beta)
+
+        points.append(np.array([x, y, z]))
+
+        cur_x, cur_y, cur_z = x, y, z
+
+    if show:
+        for point in points:
+            x, y, z = point
+            ax_3d.scatter(x, y, z, s=30, color="blue")
+
+        ax_3d.set_xlim(x_bounds)
+        ax_3d.set_ylim(y_bounds)
+        ax_3d.set_zlim(z_bounds)
+
+        plt.show()
+
+
+#spinning_line(traj_path_spinning_line, 1, 10)
+#sliding_line(traj_path_sliding_line, 10)
+
+#check_traj(traj_path_sliding_line)
 #check_static_points(traj_path_static_sin)
+
+chain_initialization(50, 1.0, 0.2, 0.1, 0.8)

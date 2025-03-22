@@ -7,11 +7,11 @@ from matplotlib.patches import Circle
 from tqdm import tqdm
 from functools import partial
 
-N_POINTS = 7
+N_POINTS = 10
 N_ADDITIONAL_POINTS = 0
 
 n_params = 12
-scene_name = "scene_4"
+scene_name = "single_anchor_static"
 
 log_path = f"logs/point_mass/log_{scene_name}.txt"
 
@@ -28,9 +28,9 @@ traj_path_line = "logs/trajs/line_xy.txt"
 traj_path_sin = "logs/trajs/sin_xy.txt"
 traj_path_static = "logs/trajs/static.txt"
 
-R_vis = 1.0
+R_vis = 3.0
 w = 0.5
-u_max = 0.5
+u_max = 1.0
 dt = 0.02
 traj_len = 10000
 
@@ -39,6 +39,9 @@ data = []
 
 s_point = 10
 s_anchor = 30
+
+s_point_3d = 50
+s_anchor_3d = 100
 
 x_bounds = (-6, 6)
 y_bounds = (-6, 6)
@@ -49,6 +52,8 @@ y_min, y_max = -5, 5
 z_min, z_max = 4, 10
 
 points_colors = ["magenta", "blue", "violet", "black", "brown", "aquamarine", "aqua", "gold", "coral", "chocolate", "purple", "teal", "pink", "gold", "violet", "magenta"]
+circle_colors = ["blue", "green", "red"]
+colorize_perception_area = False
 
 fig_3d = plt.figure(figsize = (20, 20))
 ax_3d = fig_3d.add_subplot(projection='3d')
@@ -75,7 +80,7 @@ def get_peers(points, focus_point, anchor_pose):
         peers.append(vec)
 
     for point in points:
-        d = np.linalg.norm(point.pose - focus_point.pose)
+        d = np.linalg.norm(point.pose - focus_point.pose) + np.random.normal(0, 0.0001)
 
         if d <= R_vis and point.id != focus_point.id and point.is_alive:
             if peer_state == 0:
@@ -179,7 +184,6 @@ def write_log(path, points):
             line += f"{x} {y} {z} {dx} {dy} {dz} {ux} {uy} {uz} {peer_state} {id} {is_alive} "
 
         file.write(line + "\n")
-        #print(line)
 
 
 def process(anchor_traj_path="logs/trajs/static.txt"):
@@ -192,12 +196,32 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
         PointMass(id=3, x=2, y=2, z=int(np.random.uniform(2, 11)))
     ]'''
 
-    points = [PointMass(id=i, x=np.random.uniform(x_min, x_max), y=np.random.uniform(y_min, y_max), z=np.random.uniform(z_min, z_max)) for i in range(N_POINTS)]
+    #points = [PointMass(id=i, x=np.random.uniform(x_min, x_max), y=np.random.uniform(y_min, y_max), z=np.random.uniform(z_min, z_max)) for i in range(N_POINTS)]
 
-    points.append(PointMass(id=N_POINTS, x=10, y=10, z=5, is_alive=False))
+    R_min = 0.1
+    sigma_alpha, sigma_beta = 0.8, 0.8
+    points = []
+
+    cur_x, cur_y, cur_z = 0, 0, 1
+
+    for i in range(N_POINTS):
+        interval = np.random.uniform(R_min, R_vis)
+        alpha = np.random.normal(0, sigma_alpha**2)
+        beta = np.random.normal(0, sigma_beta**2)
+
+        x = cur_x + interval * np.sin(beta)
+        y = cur_y - interval * np.sin(alpha) * np.cos(beta)
+        z = cur_z + interval * np.cos(alpha) * np.cos(beta)
+
+        point = PointMass(id=i, x=x, y=y, z=z)
+        points.append(point)
+
+        cur_x, cur_y, cur_z = x, y, z
+
+    '''points.append(PointMass(id=N_POINTS, x=10, y=10, z=5, is_alive=False))
     points.append(PointMass(id=N_POINTS+1, x=10, y=10, z=7, is_alive=False))
     points.append(PointMass(id=N_POINTS+2, x=10, y=10, z=10, is_alive=False))
-    points.append(PointMass(id=N_POINTS+3, x=10, y=10, z=11, is_alive=False))
+    points.append(PointMass(id=N_POINTS+3, x=10, y=10, z=11, is_alive=False))'''
 
     anchor = Anchor(np.array([0, 0, 1]))
     anchor_traj = []
@@ -215,6 +239,7 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
 
     n_iters = 10000
     flag = False
+    open(log_path, "w").close()
 
     for iter in tqdm(range(n_iters)):
         if iter == 4000:
@@ -226,8 +251,8 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
             '''if flag and (point.id == 0 or point.id == 3 or point.id == 7):
                 point.kill()'''
             
-            if flag and (point.id == N_POINTS or point.id == N_POINTS + 1 or point.id == N_POINTS + 2 or point.id == N_POINTS + 3):
-                point.resurrect()
+            '''if flag and (point.id == N_POINTS or point.id == N_POINTS + 1 or point.id == N_POINTS + 2 or point.id == N_POINTS + 3):
+                point.resurrect()'''
 
             if point.is_alive:
                 peers, p_state = get_peers(points, point, anchor.pose)
@@ -259,61 +284,6 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
         anchor.step()
 
 
-def animate_from_log(log_path, traj_path, axes="xy"):
-    with open(log_path, "r") as file, open(traj_path, "r") as traj_file:
-        line_num = 0
-        traj_lines = [traj_line for traj_line in traj_file]
-
-        for line in file:
-            line_num += 1
-            print(f"line number: {line_num}")
-
-            nums = [float(item) for item in line.rstrip().split(' ')]
-            points = np.array(nums).reshape(-1, n_params)
-            anchor_pose = [float(item) for item in traj_lines[line_num % traj_len].rstrip().split(' ')]
-            x_anc, y_anc, z_anc = anchor_pose
-            circle_colors = ["blue", "green", "red"]
-            plt.clf()
-
-            plt.xlabel('x')
-
-            if axes == "xy":
-                plt.xlim(x_bounds)
-                plt.ylim(y_bounds)
-                plt.ylabel('y')
-            if axes == "xz":
-                plt.xlim(x_bounds)
-                plt.ylim(z_bounds)
-                plt.ylabel('z')
-
-            plt.gca().set_aspect('equal', adjustable='box')
-
-            if axes == "xy":
-                plt.scatter(x_anc, y_anc, s=s_anchor, color="red")
-            if axes == "xz":
-                plt.scatter(x_anc, z_anc, s=s_anchor, color="red")
-
-            for point in points:
-                x, y, z, dx, dy, dz, ux, uy, uz, peer_state, id, is_alive = point
-                
-                if int(is_alive) > 0:
-                    circle_color = circle_colors[int(peer_state)]
-                    point_color = points_colors[int(id)]
-
-                    if axes == "xy":
-                        plt.scatter(x, y, s=s_point, color=point_color)
-                        circle = Circle(xy=(x, y), radius=R_vis, color=circle_color, alpha=0.2)
-                    if axes == "xz":
-                        plt.scatter(x, z, s=s_point, color=point_color)
-                        circle = Circle(xy=(x, z), radius=R_vis, color=circle_color, alpha=0.2)
-
-                    plt.gca().add_artist(circle)
-
-            plt.pause(0.01)
-
-        plt.show()
-
-
 def animate_xy(i, traj_path=""):
     with open(traj_path, "r") as traj_file:
         traj_lines = [traj_line for traj_line in traj_file]
@@ -337,7 +307,11 @@ def animate_xy(i, traj_path=""):
         x, y, z, dx, dy, dz, ux, uy, uz, peer_state, id, is_alive = point
         
         if int(is_alive) > 0:
-            circle_color = circle_colors[int(peer_state)]
+            if colorize_perception_area:
+                circle_color = circle_colors[int(peer_state)]
+            else:
+                circle_color = "grey"
+
             point_color = points_colors[int(id)]
 
             plt.scatter(x, y, s=s_point, color=point_color)
@@ -354,7 +328,6 @@ def animate_xz(i, traj_path=""):
     points = np.array(nums).reshape(-1, n_params)
     anchor_pose = [float(item) for item in traj_lines[i % traj_len].rstrip().split(' ')]
     x_anc, y_anc, z_anc = anchor_pose
-    circle_colors = ["blue", "green", "red"]
     plt.clf()
 
     plt.xlabel('x')
@@ -369,7 +342,11 @@ def animate_xz(i, traj_path=""):
         x, y, z, dx, dy, dz, ux, uy, uz, peer_state, id, is_alive = point
         
         if int(is_alive) > 0:
-            circle_color = circle_colors[int(peer_state)]
+            if colorize_perception_area:
+                circle_color = circle_colors[int(peer_state)]
+            else:
+                circle_color = "grey"
+
             point_color = points_colors[int(id)]
 
             plt.scatter(x, z, s=s_point, color=point_color)
@@ -396,17 +373,14 @@ def animate_3d(i, traj_lines=[]):
     agents = np.array(nums).reshape(-1, n_params)
     anchor_pose = [float(item) for item in traj_lines[i % traj_len].rstrip().split(' ')]
     x_anc, y_anc, z_anc = anchor_pose
-    ax_3d.scatter(x_anc, y_anc, z_anc, s=s_anchor, color="red")
+    ax_3d.scatter(x_anc, y_anc, z_anc, s=s_anchor_3d, color="red")
 
     for agent in agents:
         x, y, z, dx, dy, dz, ux, uy, uz, peer_state, id, is_alive = agent
         
         if int(is_alive) > 0:
-            circle_color = circle_colors[int(peer_state)]
             point_color = points_colors[int(id)]
-
-            ax_3d.scatter(x, y, z, s=s_point, color=point_color)
-            #ax_3d.scatter(x, y, z, s=np.pi*R_vis**2, color=circle_color, alpha=0.2)
+            ax_3d.scatter(x, y, z, s=s_point_3d, color=point_color)
 
 
 def create_gif(log_path, gif_path, traj_path, flag="xy", frame_step=4):
@@ -435,7 +409,7 @@ def create_gif(log_path, gif_path, traj_path, flag="xy", frame_step=4):
         if flag == "xz":
             anim = animation.FuncAnimation(fig, partial(animate_xz, traj_path=traj_path), frames = tqdm(range(0, n_frames, frame_step)), interval = 20)
         if flag == "3d":
-            anim = animation.FuncAnimation(fig_3d, partial(animate_3d, traj_lines=traj_lines), frames = tqdm(range(0, 6000, frame_step)), interval = 20)
+            anim = animation.FuncAnimation(fig_3d, partial(animate_3d, traj_lines=traj_lines), frames = tqdm(range(0, 4000, frame_step)), interval = 20)
 
         anim.save(gif_path, fps = 60, writer = 'pillow')
 
@@ -524,14 +498,13 @@ def plot_graph_xy(log_path, traj_path, graph_path):
         plt.show()
 
 
-current_traj_path = traj_path_circle_skew
+current_traj_path = traj_path_static
 
 #process(anchor_traj_path=current_traj_path)
-#animate_from_log(log_path, current_traj_path, axes="xy")
 
 #create_gif(log_path, gif_path_xz, current_traj_path, flag="xz", frame_step=10)
 #create_gif(log_path, gif_path_xy, current_traj_path, flag="xy", frame_step=10)
-#create_gif(log_path, gif_path_3d, current_traj_path, flag="3d", frame_step=15)
+create_gif(log_path, gif_path_3d, current_traj_path, flag="3d", frame_step=20)
 
 #plot_graph_z(log_path, current_traj_path, graph_path_z)
 #plot_graph_xy(log_path, current_traj_path, graph_path_xy)

@@ -8,12 +8,8 @@ from mpl_toolkits import mplot3d
 from tqdm import tqdm
 
 
-N_AGENTS_IN_FAMILY = 5
-N_ANCHORS = 10
 n_params = 13
 
-dt = 0.02
-n_frames = 10000
 data = []
 
 fig_3d = plt.figure(figsize = (20, 20))
@@ -21,6 +17,9 @@ ax_3d = fig_3d.add_subplot(projection='3d')
 
 s_point = 10
 s_anchor = 20
+s_point_3d = 50
+s_anchor_3d = 100
+circle_colors = ["blue", "green", "red"]
 
 x_bounds = (-10, 10)
 y_bounds = (-10, 10)
@@ -80,21 +79,34 @@ def write_log(path, points):
         file.write(line + "\n")
 
 
-def process(log_path_agents, log_path_anchors, anchor_mode="processing"):
-    agents = [PointAgent(id=i, family_id=(i // N_AGENTS_IN_FAMILY), x=np.random.uniform(x_agent_min, x_agent_max), y=np.random.uniform(y_agent_min, y_agent_max), z=np.random.uniform(z_agent_min, z_agent_max), u_max=10.0) for i in range(N_ANCHORS * N_AGENTS_IN_FAMILY)]
+def process(log_path_agents, 
+            log_path_anchors,
+            n_anchors,
+            dt=0.02, 
+            n_iters=10000,
+            agents_initialization="chain",
+            anchors_initialization="certain",
+            predefined_anchor_traj_params=None,
+            anchor_mode="processing"):
+    
+    #agents = [PointAgent(id=i, family_id=(i // N_AGENTS_IN_FAMILY), x=np.random.uniform(x_agent_min, x_agent_max), y=np.random.uniform(y_agent_min, y_agent_max), z=np.random.uniform(z_agent_min, z_agent_max), u_max=10.0) for i in range(N_ANCHORS * N_AGENTS_IN_FAMILY)]
 
     if anchor_mode == "processing":
-        anchors = [Anchor(id=i, family_id=i, x=np.random.uniform(x_anchor_min, x_anchor_max), y=np.random.uniform(y_anchor_min, y_anchor_max), z=np.random.uniform(z_anchor_min, z_anchor_max)) for i in range(N_ANCHORS)]
+        anchors = [Anchor(id=i, family_id=i, x=np.random.uniform(x_anchor_min, x_anchor_max), y=np.random.uniform(y_anchor_min, y_anchor_max), z=np.random.uniform(z_anchor_min, z_anchor_max)) for i in range(n_anchors)]
     if anchor_mode == "predefined":
         with open(log_path_anchors, "r") as file:
             trajs_lines = [[float(item) for item in traj_line.rstrip().split(' ')] for traj_line in file]
             logs = np.array(trajs_lines)
-            anchors_logs = np.hsplit(logs, N_ANCHORS)
+            anchors_logs = np.hsplit(logs, n_anchors)
 
         anchors = [AnchorPredefined(id=i, family_id=i, trajectory=traj[:,0:3]) for i, traj in enumerate(anchors_logs)]
 
-    n_iters = 10000
     print("processing...")
+
+    open(log_path_agents, "w").close()
+
+    if anchor_mode == "processing":
+        open(log_path_anchors, "w").close()
 
     for i in tqdm(range(n_iters)):
         write_log(log_path_agents, agents)
@@ -126,74 +138,7 @@ def process(log_path_agents, log_path_anchors, anchor_mode="processing"):
             agent.perform(peers, p_state, signs, dt)
 
 
-def animate_from_log(log_path_agents, log_path_anchors, axes="xy"):
-    with open(log_path_agents, "r") as f_agents, open(log_path_anchors, "r") as f_anchors:
-        line_num = 0
-        agents_lines = [agents_line for agents_line in f_agents]
-        anchors_lines = [anchors_line for anchors_line in f_anchors]
-
-        for line_agents, line_anchors in zip(agents_lines, anchors_lines):
-            line_num += 1
-            print(f"line number: {line_num}")
-            circle_colors = ["blue", "green", "red"]
-            plt.clf()
-
-            plt.xlabel('x')
-
-            if axes == "xy":
-                plt.xlim(x_bounds)
-                plt.ylim(y_bounds)
-                plt.ylabel('y')
-            if axes == "xz":
-                plt.xlim(x_bounds)
-                plt.ylim(z_bounds)
-                plt.ylabel('z')
-
-            plt.gca().set_aspect('equal', adjustable='box')
-
-            nums_agents = [float(item) for item in line_agents.rstrip().split(' ')]
-            nums_anchors = [float(item) for item in line_anchors.rstrip().split(' ')]
-
-            agents = np.array(nums_agents).reshape(-1, n_params)
-            anchors = np.array(nums_anchors).reshape(-1, n_params)
-
-            for agent in agents:
-                x, y, z, dx, dy, dz, ux, uy, uz, peer_state, family_id, R_vis, is_alive = agent
-                circle_color = circle_colors[int(peer_state)]
-                point_color = family_colors[int(family_id)]
-
-                if is_alive:
-                    if axes == "xy":
-                        plt.scatter(x, y, s=s_point, color=point_color)
-                        circle = Circle(xy=(x, y), radius=R_vis, color=circle_color, alpha=0.2)
-                    if axes == "xz":
-                        plt.scatter(x, z, s=s_point, color=point_color)
-                        circle = Circle(xy=(x, z), radius=R_vis, color=circle_color, alpha=0.2)
-
-                    plt.gca().add_artist(circle)
-
-            for anchor in anchors:
-                x, y, z, dx, dy, dz, ux, uy, uz, peer_state, family_id, R_vis, is_alive = anchor
-                circle_color = circle_colors[int(peer_state)]
-                point_color = family_colors[int(family_id)]
-
-                if is_alive:
-                    if axes == "xy":
-                        plt.scatter(x, y, s=s_anchor, color="red")
-                        circle = Circle(xy=(x, y), radius=R_vis, color=circle_color, alpha=0.2)
-                    if axes == "xz":
-                        plt.scatter(x, z, s=s_anchor, color="red")
-                        circle = Circle(xy=(x, z), radius=R_vis, color=circle_color, alpha=0.2)
-
-                    plt.gca().add_artist(circle)
-
-            plt.pause(0.01)
-
-        plt.show()
-
-
 def animate_xy(i):
-    circle_colors = ["blue", "green", "red"]
     plt.clf()
 
     plt.xlabel('x')
@@ -231,7 +176,6 @@ def animate_xy(i):
 
 
 def animate_xz(i):
-    circle_colors = ["blue", "green", "red"]
     plt.clf()
 
     plt.xlabel('x')
@@ -268,7 +212,7 @@ def animate_xz(i):
             plt.gca().add_artist(circle)
 
 
-def create_gif(log_path_agents, log_path_anchors, gif_path, flag="xy", frame_step=20, start_frame=0, end_frame=n_frames):
+def create_gif(log_path_agents, log_path_anchors, gif_path, flag="xy", frame_step=20, start_frame=0, end_frame=10000):
     print(f"creating gif in {flag} projection...")
     iters = 0
 
@@ -297,62 +241,6 @@ def create_gif(log_path_agents, log_path_anchors, gif_path, flag="xy", frame_ste
             anim = animation.FuncAnimation(fig_3d, animate_3d, frames = tqdm(range(start_frame, end_frame, frame_step)), interval = 20)
 
         anim.save(gif_path, fps = 60, writer = 'pillow')
-
-
-def animate_from_log_3d(log_path_agents, log_path_anchors):
-    fig = plt.figure(figsize = (20, 20))
-    ax = fig.add_subplot(projection='3d')
-
-    with open(log_path_agents, "r") as f_agents, open(log_path_anchors, "r") as f_anchors:
-        line_num = 0
-        agents_lines = [agents_line for agents_line in f_agents]
-        anchors_lines = [anchors_line for anchors_line in f_anchors]
-
-        for line_agents, line_anchors in zip(agents_lines, anchors_lines):
-            line_num += 1
-            print(f"line number: {line_num}")
-            circle_colors = ["blue", "green", "red"]
-            ax.clear()
-
-            ax.set_xlabel('x')
-            ax.set_ylabel('y')
-            ax.set_zlabel('z')
-
-            ax.set_xlim(x_bounds)
-            ax.set_ylim(y_bounds)
-            ax.set_zlim(z_bounds)
-
-            ax.set_aspect('equal', adjustable='box')
-
-            nums_agents = [float(item) for item in line_agents.rstrip().split(' ')]
-            nums_anchors = [float(item) for item in line_anchors.rstrip().split(' ')]
-
-            agents = np.array(nums_agents).reshape(-1, n_params)
-            anchors = np.array(nums_anchors).reshape(-1, n_params)
-
-            for agent in agents:
-                x, y, z, dx, dy, dz, ux, uy, uz, peer_state, family_id, R_vis, is_alive = agent
-                
-                if is_alive:
-                    circle_color = circle_colors[int(peer_state)]
-                    point_color = family_colors[int(family_id)]
-
-                    ax.scatter(x, y, z, s=s_point, color=point_color)
-
-            for anchor in anchors:
-                x, y, z, dx, dy, dz, ux, uy, uz, peer_state, family_id, R_vis, is_alive = anchor
-                
-                if is_alive:
-                    circle_color = circle_colors[int(peer_state)]
-                    point_color = family_colors[int(family_id)]
-
-                    ax.scatter(x, y, z, s=s_anchor, color="red")
-
-                    #plt.gca().add_artist(circle)
-
-            plt.pause(0.001)
-
-        plt.show()
 
 
 def animate_3d(i):
@@ -387,20 +275,26 @@ def animate_3d(i):
             ax_3d.scatter(x, y, z, s=s_anchor, color="red")
 
 
-def launch(scene_name, anchor_mode="processing", suffix=""):
-    if anchor_mode not in ["processing", "predefined"]:
+def launch(scene_name, 
+           anchor_mode="processing",
+           agents_log_folder="grid_antenna/logs/agents", 
+           anchors_log_folder="grid_antenna/logs/anchors", 
+           anchors_predefined_log_folder="grid_antenna/logs/anchors_predefined", 
+           suffix=""):
+    
+    if anchor_mode not in ["processing", "predefined", "static"]:
         print("incorrect anchor mode")
         return
     
     if len(suffix) > 0:
         suffix = f"_{suffix}"
     
-    log_path_agents = f"grid_antenna/logs/agents/log_agents_{scene_name}{suffix}.txt"
+    log_path_agents = f"{agents_log_folder}/log_agents_{scene_name}{suffix}.txt"
 
     if anchor_mode == "processing":
-        log_path_anchors = f"grid_antenna/logs/anchors/log_anchors_{scene_name}{suffix}.txt"
+        log_path_anchors = f"{anchors_log_folder}/log_anchors_{scene_name}{suffix}.txt"
     if anchor_mode == "predefined":
-        log_path_anchors = f"grid_antenna/logs/anchors_predefined/{scene_name}.txt"
+        log_path_anchors = f"{anchors_predefined_log_folder}/{scene_name}.txt"
 
     gif_path_xy = f"grid_antenna/gifs/{scene_name}{suffix}_xy.gif"
     gif_path_3d = f"grid_antenna/gifs/{scene_name}{suffix}_3d_part_1.gif"
