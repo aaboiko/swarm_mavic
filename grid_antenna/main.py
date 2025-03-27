@@ -6,6 +6,7 @@ from utils import PointAgent, Anchor, AnchorPredefined, AnchorStatic
 from matplotlib.patches import Circle
 from mpl_toolkits import mplot3d
 from tqdm import tqdm
+from scene_creator import static_sin_points, chain_poses, spinning_line_points, sliding_line_points
 
 
 n_params = 13
@@ -15,15 +16,21 @@ data = []
 fig_3d = plt.figure(figsize = (20, 20))
 ax_3d = fig_3d.add_subplot(projection='3d')
 
-s_point = 10
-s_anchor = 20
-s_point_3d = 50
-s_anchor_3d = 100
+s_point = 30
+s_anchor = 60
+
+s_point_3d = 100
+s_anchor_3d = 200
+
 circle_colors = ["blue", "green", "red"]
 
-x_bounds = (-10, 10)
-y_bounds = (-10, 10)
-z_bounds = (0, 20)
+#x_bounds = (-10, 10)
+#y_bounds = (-10, 10)
+#z_bounds = (0, 10)
+
+x_bounds = (-6, 6)
+y_bounds = (-6, 6)
+z_bounds = (0, 6)
 
 x_agent_min, x_agent_max = -10, 10
 y_agent_min, y_agent_max = -10, 10
@@ -82,14 +89,36 @@ def write_log(path, points):
 def process(log_path_agents, 
             log_path_anchors,
             n_anchors,
-            dt=0.02, 
+            n_agents_in_family,
+            dt=0.02,
+            log_step=1,
+            R_vis=2.5, 
             n_iters=10000,
+            u_max=10.0,
+            w=0.5,
+            sigma=0.8,
             agents_initialization="chain",
             anchors_initialization="certain",
             predefined_anchor_traj_params=None,
             anchor_mode="processing"):
     
     #agents = [PointAgent(id=i, family_id=(i // N_AGENTS_IN_FAMILY), x=np.random.uniform(x_agent_min, x_agent_max), y=np.random.uniform(y_agent_min, y_agent_max), z=np.random.uniform(z_agent_min, z_agent_max), u_max=10.0) for i in range(N_ANCHORS * N_AGENTS_IN_FAMILY)]
+
+    agents = []
+    #anchor_points = static_sin_points()
+    anchor_points = spinning_line_points(gap=1, n_agents=n_anchors)
+    #anchor_points = sliding_line_points(n_agents=n_anchors)
+    cur_id = 0
+
+    for point in anchor_points:
+        anch_x, anch_y, anch_z = point
+        poses = chain_poses(n_agents_in_family, R_vis, 0.1, sigma, sigma, x_anchor=anch_x, y_anchor=anch_y, z_anchor=anch_z)
+
+        for pose in poses:
+            x, y, z = pose
+            agent = PointAgent(id=cur_id, family_id=(cur_id // n_agents_in_family), x=x, y=y, z=z, R_vis=R_vis, u_max=u_max, w=w)
+            agents.append(agent)
+            cur_id += 1
 
     if anchor_mode == "processing":
         anchors = [Anchor(id=i, family_id=i, x=np.random.uniform(x_anchor_min, x_anchor_max), y=np.random.uniform(y_anchor_min, y_anchor_max), z=np.random.uniform(z_anchor_min, z_anchor_max)) for i in range(n_anchors)]
@@ -109,9 +138,10 @@ def process(log_path_agents,
         open(log_path_anchors, "w").close()
 
     for i in tqdm(range(n_iters)):
-        write_log(log_path_agents, agents)
+        if i % log_step == 0:
+            write_log(log_path_agents, agents)
 
-        if anchor_mode == "processing":
+        if anchor_mode == "processing"and i % log_step == 0:
             write_log(log_path_anchors, anchors)
 
         for anchor in anchors:
@@ -156,7 +186,8 @@ def animate_xy(i):
         x, y, z, dx, dy, dz, ux, uy, uz, peer_state, family_id, R_vis, is_alive = agent
         
         if is_alive:
-            circle_color = circle_colors[int(peer_state)]
+            #circle_color = circle_colors[int(peer_state)]
+            circle_color="grey"
             point_color = family_colors[int(family_id)]
 
             plt.scatter(x, y, s=s_point, color=point_color)
@@ -212,7 +243,7 @@ def animate_xz(i):
             plt.gca().add_artist(circle)
 
 
-def create_gif(log_path_agents, log_path_anchors, gif_path, flag="xy", frame_step=20, start_frame=0, end_frame=10000):
+def create_gif(log_path_agents, log_path_anchors, gif_path, flag="xy", frame_step=20, start_frame=0, end_frame=10000, n_frames=10000):
     print(f"creating gif in {flag} projection...")
     iters = 0
 
@@ -265,17 +296,24 @@ def animate_3d(i):
         
         if is_alive:
             point_color = family_colors[int(family_id)]
-            ax_3d.scatter(x, y, z, s=s_point, color=point_color)
+            ax_3d.scatter(x, y, z, s=s_point_3d, color=point_color)
 
     for anchor in anchors:
         x, y, z, dx, dy, dz, ux, uy, uz, peer_state, family_id, R_vis, is_alive = anchor
         
         if is_alive:
             point_color = family_colors[int(family_id)]
-            ax_3d.scatter(x, y, z, s=s_anchor, color="red")
+            ax_3d.scatter(x, y, z, s=s_anchor_3d, color="red")
 
 
 def launch(scene_name, 
+           n_anchors,
+           n_agents_in_family,
+           dt=0.02,
+           log_step=1,
+           n_iters=10000,
+           u_max=10.0,
+           sigma=0.8,
            anchor_mode="processing",
            agents_log_folder="grid_antenna/logs/agents", 
            anchors_log_folder="grid_antenna/logs/anchors", 
@@ -297,16 +335,17 @@ def launch(scene_name,
         log_path_anchors = f"{anchors_predefined_log_folder}/{scene_name}.txt"
 
     gif_path_xy = f"grid_antenna/gifs/{scene_name}{suffix}_xy.gif"
-    gif_path_3d = f"grid_antenna/gifs/{scene_name}{suffix}_3d_part_1.gif"
+    gif_path_3d = f"grid_antenna/gifs/{scene_name}{suffix}_3d.gif"
     gif_path_3d_end = f"grid_antenna/gifs/{scene_name}{suffix}_3d_part_2.gif"
 
-    process(log_path_agents, log_path_anchors, anchor_mode=anchor_mode)
+    #process(log_path_agents, log_path_anchors, n_anchors, n_agents_in_family, anchor_mode=anchor_mode, u_max=u_max, dt=dt, log_step=log_step, n_iters=n_iters, sigma=sigma)
 
-    create_gif(log_path_agents, log_path_anchors, gif_path_xy, flag="xy", frame_step=20)
-    create_gif(log_path_agents, log_path_anchors, gif_path_3d, flag="3d", frame_step=20, start_frame=0, end_frame=5000)
-    create_gif(log_path_agents, log_path_anchors, gif_path_3d_end, flag="3d", frame_step=20, start_frame=5000, end_frame=10000)
+    #create_gif(log_path_agents, log_path_anchors, gif_path_xy, flag="xy", frame_step=20)
+    create_gif(log_path_agents, log_path_anchors, gif_path_3d, flag="3d", frame_step=45)
+    
+    #create_gif(log_path_agents, log_path_anchors, gif_path_3d, flag="3d", frame_step=20, start_frame=0, end_frame=4000)
 
 
 scene_name = "spinning_line"
 
-launch(scene_name, anchor_mode="predefined", suffix="umax_10")
+launch(scene_name, 6, 5, anchor_mode="predefined", dt=0.02, log_step=1, n_iters=10000, u_max=15.0, sigma=0.6)

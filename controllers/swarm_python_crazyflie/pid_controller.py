@@ -13,7 +13,10 @@ kp_z = 4
 ki_z = 0.1
 kd_z = 0.0'''
 
-kp_vel_xy = 4
+#kp_att_rp = 0.2
+#kd_att_rp = 0.05
+
+kp_vel_xy = 8
 kd_vel_xy = 1
 
 kp_z = 18
