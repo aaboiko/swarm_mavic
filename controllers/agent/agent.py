@@ -16,7 +16,7 @@ from controller import LED
 from controller import Motor
 
 
-R_vis = 0.7
+R_vis = 0.8
 w = 0.5
 u_max = 0.5
 
@@ -101,7 +101,11 @@ def get_nearest_distances(peers, anchor_dir):
                 else:
                     distances.append(0)
             else:
-                distances.append(R_vis)
+                #distances.append(R_vis)
+                if i == 2 or i == 5:
+                    distances.append(R_vis)
+                else:
+                    distances.append(w)
         else:
             distances.append(mins[i])
     
@@ -191,7 +195,8 @@ def main(logging=False, log_name="log"):
         x, y, altitude = gps.getValues()
         droll, dpitch, dyaw = gyro.getValues()
 
-        dpose_global = controller.get_vxyz_global(x, y, altitude)
+        #dpose_global = controller.get_vxyz_global(x, y, altitude)
+        dpose_global = gps.getSpeedVector()
         vx_global, vy_global, vz_global = dpose_global
         vx = vx_global * np.cos(yaw) + vy_global * np.sin(yaw)
         vy = -vx_global * np.sin(yaw) + vy_global * np.cos(yaw)

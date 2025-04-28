@@ -1,4 +1,5 @@
 import numpy as np
+from swarming import SceneSupervisor
 
 class PointMass:
     def __init__(self, id=0, family_id=0, mass=1.0, x=0, y=0, z=0, u_max=0.5, R_vis=1.0, is_alive=True):

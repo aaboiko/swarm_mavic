@@ -28,8 +28,8 @@ circle_colors = ["blue", "green", "red"]
 #y_bounds = (-10, 10)
 #z_bounds = (0, 10)
 
-x_bounds = (-6, 6)
-y_bounds = (-6, 6)
+x_bounds = (-8, 8)
+y_bounds = (-8, 8)
 z_bounds = (0, 6)
 
 x_agent_min, x_agent_max = -10, 10
@@ -106,7 +106,7 @@ def process(log_path_agents,
 
     agents = []
     #anchor_points = static_sin_points()
-    anchor_points = spinning_line_points(gap=1, n_agents=n_anchors)
+    anchor_points = spinning_line_points(gap=1, n_agents=n_anchors, steps_from_center=2)
     #anchor_points = sliding_line_points(n_agents=n_anchors)
     cur_id = 0
 
@@ -338,14 +338,14 @@ def launch(scene_name,
     gif_path_3d = f"grid_antenna/gifs/{scene_name}{suffix}_3d.gif"
     gif_path_3d_end = f"grid_antenna/gifs/{scene_name}{suffix}_3d_part_2.gif"
 
-    #process(log_path_agents, log_path_anchors, n_anchors, n_agents_in_family, anchor_mode=anchor_mode, u_max=u_max, dt=dt, log_step=log_step, n_iters=n_iters, sigma=sigma)
+    process(log_path_agents, log_path_anchors, n_anchors, n_agents_in_family, anchor_mode=anchor_mode, u_max=u_max, dt=dt, log_step=log_step, n_iters=n_iters, sigma=sigma)
 
-    #create_gif(log_path_agents, log_path_anchors, gif_path_xy, flag="xy", frame_step=20)
-    create_gif(log_path_agents, log_path_anchors, gif_path_3d, flag="3d", frame_step=45)
+    create_gif(log_path_agents, log_path_anchors, gif_path_xy, flag="xy", frame_step=20)
+    create_gif(log_path_agents, log_path_anchors, gif_path_3d, flag="3d", frame_step=45, end_frame=6000)
     
     #create_gif(log_path_agents, log_path_anchors, gif_path_3d, flag="3d", frame_step=20, start_frame=0, end_frame=4000)
 
 
 scene_name = "spinning_line"
 
-launch(scene_name, 6, 5, anchor_mode="predefined", dt=0.02, log_step=1, n_iters=10000, u_max=15.0, sigma=0.6)
+launch(scene_name, 6, 5, anchor_mode="predefined", dt=0.02, log_step=1, n_iters=10000, u_max=10.0, sigma=0.6)

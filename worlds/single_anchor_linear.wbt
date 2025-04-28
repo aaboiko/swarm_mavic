@@ -27,11 +27,22 @@ Viewpoint {
   follow "Crazyflie"
   followSmoothness 0.2
 }
-TexturedBackground {
-  luminosity 3
+
+
+
+Background{
+   skyColor 1 1 1
+   backUrl "textures/white.jpg"
+   bottomUrl "textures/white.jpg"
+   frontUrl "textures/white.jpg"
+   leftUrl "textures/white.jpg"
+   rightUrl "textures/white.jpg"
+   topUrl "textures/white.jpg"
+   luminosity 0
 }
 
 TexturedBackgroundLight {
+    castShadows FALSE
 }
 
 Floor {
@@ -42,11 +53,12 @@ Floor {
   appearance PBRAppearance {
     baseColorMap ImageTexture {
       url [
-        "textures/white.jpg"
+        "textures/checkered_parquetry.jpg"
       ]
     }
     roughness 1
     metalness 0
+    transparency 0.04
   }
 }
 

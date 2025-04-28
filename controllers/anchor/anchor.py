@@ -18,7 +18,7 @@ from controller import LED
 from controller import Motor
 
 
-VELOCITY = 0.1
+VELOCITY = 0.03
 
 
 def main(traj="linear", logging=False, log_name="log"):
@@ -62,7 +62,7 @@ def main(traj="linear", logging=False, log_name="log"):
             os.mkdir(folder_name)
         
         os.chdir(folder_name)
-        file = open("anchor" + ".txt", "w")
+        file = open("anchor_" + log_name + ".txt", "w")
         print('logging started. Folder name: ' + folder_name)
 
     target_altitude = 1.0
