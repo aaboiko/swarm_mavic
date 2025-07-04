@@ -7,26 +7,7 @@ from matplotlib.patches import Circle
 from tqdm import tqdm
 from functools import partial
 
-N_POINTS = 7
-N_ADDITIONAL_POINTS = 4
-
 n_params = 12
-scene_name = "single_anchor_circle"
-
-log_path = f"logs/point_mass/log_{scene_name}.txt"
-
-gif_path_xy = f"gifs/{scene_name}_xy.gif"
-gif_path_xz = f"gifs/{scene_name}_xz.gif"
-gif_path_3d = f"gifs/{scene_name}_3d.gif"
-
-graph_path_z = f"gifs/{scene_name}_z.jpg"
-graph_path_xy = f"gifs/{scene_name}_xy.jpg"
-
-traj_path_circle_xy = "logs/trajs/circle_xy.txt"
-traj_path_circle_skew = "logs/trajs/circle_skew.txt"
-traj_path_line = "logs/trajs/line_xy.txt"
-traj_path_sin = "logs/trajs/sin_xy.txt"
-traj_path_static = "logs/trajs/static.txt"
 
 R_vis = 3.0
 w = 0.5
@@ -186,17 +167,8 @@ def write_log(path, points):
         file.write(line + "\n")
 
 
-def process(anchor_traj_path="logs/trajs/static.txt"):
+def process(n_points, log_path, anchor_traj_path="logs/trajs/static.txt", dropout=False, newcomers=False, dropout_idx=[], n_newcomers=4):
     print('processing...')
-
-    '''points = [
-        PointMass(id=0, x=-2, y=-2, z=int(np.random.uniform(2, 11))),
-        PointMass(id=1, x=-2, y=2, z=int(np.random.uniform(2, 11))),
-        PointMass(id=2, x=2, y=-2, z=int(np.random.uniform(2, 11))),
-        PointMass(id=3, x=2, y=2, z=int(np.random.uniform(2, 11)))
-    ]'''
-
-    #points = [PointMass(id=i, x=np.random.uniform(x_min, x_max), y=np.random.uniform(y_min, y_max), z=np.random.uniform(z_min, z_max)) for i in range(N_POINTS)]
 
     R_min = 0.1
     sigma_alpha, sigma_beta = 0.8, 0.8
@@ -204,7 +176,7 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
 
     cur_x, cur_y, cur_z = 4, 0, 1
 
-    for i in range(N_POINTS):
+    for i in range(n_points):
         interval = np.random.uniform(R_min, R_vis)
         alpha = np.random.normal(0, sigma_alpha**2)
         beta = np.random.normal(0, sigma_beta**2)
@@ -218,10 +190,9 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
 
         cur_x, cur_y, cur_z = x, y, z
 
-    points.append(PointMass(id=N_POINTS, x=0, y=4.5, z=3, is_alive=False))
-    points.append(PointMass(id=N_POINTS+1, x=0, y=4.5, z=5, is_alive=False))
-    points.append(PointMass(id=N_POINTS+2, x=0, y=4.5, z=8, is_alive=False))
-    points.append(PointMass(id=N_POINTS+3, x=0, y=4.5, z=11, is_alive=False))
+    if newcomers:
+        for i in n_newcomers:
+            points.append(PointMass(id=n_points + i, x=0, y=4.5, z=3*i, is_alive=False))
 
     anchor = Anchor(np.array([0, 0, 1]))
     anchor_traj = []
@@ -248,11 +219,13 @@ def process(anchor_traj_path="logs/trajs/static.txt"):
         write_log(log_path, points)
 
         for point in points:
-            '''if flag and (point.id == 0 or point.id == 3 or point.id == 7):
-                point.kill()'''
+            if dropout:
+                if flag and point.id in dropout_idx:
+                    point.kill()
             
-            if flag and (point.id == N_POINTS or point.id == N_POINTS + 1 or point.id == N_POINTS + 2 or point.id == N_POINTS + 3):
-                point.resurrect()
+            if newcomers:
+                if flag and point.id >= n_points:
+                    point.resurrect()
 
             if point.is_alive:
                 peers, p_state = get_peers(points, point, anchor.pose)
@@ -454,7 +427,7 @@ def plot_graph_z(log_path, traj_path, graph_path):
         plt.xlabel('t', fontsize=14)
         plt.ylabel(r'$z_i - z_{anchor}$', fontsize=14)
         plt.title(r'$z_i - z_{anchor}$ for all agents', fontsize=14)
-        plt.ylim(z_bounds)
+        #plt.ylim(z_bounds)
         
         plt.savefig(graph_path)
         plt.show()
@@ -501,46 +474,37 @@ def plot_graph_xy(log_path, traj_path, graph_path):
 
             line_num += 1
 
-        plt.xlabel('t', fontsize=14)
-        plt.ylabel(r'$d_i$ from anchor Z-axis', fontsize=14)
+        plt.xlabel('t', fontsize=24)
+        plt.ylabel(r'$d_i$ from anchor Z-axis', fontsize=24)
         plt.title(r'XY-distances from anchor axis for all agents', fontsize=14)
-        plt.ylim((-1, 3))
+        #plt.ylim((-0.1, 2))
         
         plt.savefig(graph_path)
         plt.show()
 
 
-def rewrite_gifs_static():
-    current_traj_path = traj_path_static
-
-    create_gif(log_path, gif_path_xz, current_traj_path, flag="xz", frame_step=10)
-    create_gif(log_path, gif_path_xy, current_traj_path, flag="xy", frame_step=10)
-    create_gif(log_path, gif_path_3d, current_traj_path, flag="3d", frame_step=20)
-
-def rewrite_gifs_line():
-    current_traj_path = traj_path_line
-
-    create_gif(log_path, gif_path_xz, current_traj_path, flag="xz", frame_step=10)
-    create_gif(log_path, gif_path_xy, current_traj_path, flag="xy", frame_step=10)
-    create_gif(log_path, gif_path_3d, current_traj_path, flag="3d", frame_step=25)
-
-def rewrite_gifs_circle():
-    current_traj_path = traj_path_circle_xy
-
-    #create_gif(log_path, gif_path_xz, current_traj_path, flag="xz", frame_step=10)
-    #create_gif(log_path, gif_path_xy, current_traj_path, flag="xy", frame_step=10)
-    create_gif(log_path, gif_path_3d, current_traj_path, flag="3d", frame_step=25)
+traj_path_circle_xy = "logs/trajs/circle_xy.txt"
+traj_path_circle_skew = "logs/trajs/circle_skew.txt"
+traj_path_line = "logs/trajs/line_xy.txt"
+traj_path_sin = "logs/trajs/sin_xy.txt"
+traj_path_static = "logs/trajs/static.txt"
 
 
-#current_traj_path = traj_path_static
+def run(scene_name, traj_path):
+    log_path = f"logs/point_mass/log_{scene_name}.txt"
 
-#process(anchor_traj_path=current_traj_path)
+    gif_path_xy = f"gifs/{scene_name}_xy.gif"
+    gif_path_xz = f"gifs/{scene_name}_xz.gif"
+    gif_path_3d = f"gifs/{scene_name}_3d.gif"
 
-#create_gif(log_path, gif_path_xz, current_traj_path, flag="xz", frame_step=10)
-#create_gif(log_path, gif_path_xy, current_traj_path, flag="xy", frame_step=10)
-#create_gif(log_path, gif_path_3d, current_traj_path, flag="3d", frame_step=20)
+    graph_path_z = f"gifs/{scene_name}_z.jpg"
+    graph_path_xy = f"gifs/{scene_name}_xy.jpg"
 
-#plot_graph_z(log_path, current_traj_path, graph_path_z)
-#plot_graph_xy(log_path, current_traj_path, graph_path_xy)
+    process(log_path, anchor_traj_path=traj_path)
 
-rewrite_gifs_circle()
+    create_gif(log_path, gif_path_xz, traj_path, flag="xz", frame_step=10)
+    create_gif(log_path, gif_path_xy, traj_path, flag="xy", frame_step=10)
+    create_gif(log_path, gif_path_3d, traj_path, flag="3d", frame_step=20)
+
+    plot_graph_z(log_path, traj_path, graph_path_z)
+    plot_graph_xy(log_path, traj_path, graph_path_xy)

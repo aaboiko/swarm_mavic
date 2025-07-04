@@ -18,7 +18,7 @@ from controller import LED
 from controller import Motor
 
 
-VELOCITY = 0.03
+VELOCITY = 0.0
 
 
 def main(traj="linear", logging=False, log_name="log"):

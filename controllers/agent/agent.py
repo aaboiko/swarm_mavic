@@ -16,9 +16,12 @@ from controller import LED
 from controller import Motor
 
 
-R_vis = 0.8
-w = 0.5
-u_max = 0.5
+R_vis = 0.4
+w = 0.25
+u_max = 0.25
+
+z_init_min = 1.5
+z_init_max = 4.0
 
 
 def sign(x):
@@ -170,7 +173,7 @@ def main(logging=False, log_name="log"):
 
     print("Starting the drone...\n")
 
-    target_altitude = np.random.uniform(3.0, 7.0)
+    target_altitude = np.random.uniform(z_init_min, z_init_max)
 
     target_altitude_speed = 0.0
     forward_desired = 0
@@ -184,6 +187,7 @@ def main(logging=False, log_name="log"):
             os.mkdir(folder_name)
         
         os.chdir(folder_name)
+        open("robot_" + str(robot_id) + ".txt", "w").close()
         file = open("robot_" + str(robot_id) + ".txt", "w")
         print('logging started. Folder name: ' + folder_name)
 
@@ -254,4 +258,4 @@ def main(logging=False, log_name="log"):
 
 
 if __name__ == '__main__':
-    main(logging=False, log_name="log")
+    main(logging=False, log_name="log_anchor_static")

@@ -81,6 +81,49 @@ class PointMass:
         return mins, ids
     
 
+    def get_farthest_distances(self, peers):
+        max_dist_x_plus, max_dist_y_plus, max_dist_z_plus = 0, 0, np.inf
+        max_dist_x_minus, max_dist_y_minus, max_dist_z_minus = 0, 0, np.inf
+        id_x_plus, id_y_plus, id_z_plus = -1, -1, -1
+        id_x_minus, id_y_minus, id_z_minus = -1, -1, -1
+
+        for i in range(len(peers)):
+            peer = peers[i]
+            vx, vy, vz = peer
+
+            if vx >= 0:
+                if vx > max_dist_x_plus:
+                    max_dist_x_plus = vx
+                    id_x_plus = i
+            else:
+                if -vx > max_dist_x_minus:
+                    max_dist_x_minus = -vx
+                    id_x_minus = i
+
+            if vy >= 0:
+                if vy > max_dist_y_plus:
+                    max_dist_y_plus = vy
+                    id_y_plus = i
+            else:
+                if -vy > max_dist_y_minus:
+                    max_dist_y_minus = -vy
+                    id_y_minus = i
+
+            if vz >= 0:
+                if vz < max_dist_z_plus:
+                    max_dist_z_plus = vz
+                    id_z_plus = i
+            else:
+                if -vz < max_dist_z_minus:
+                    max_dist_z_minus = -vz
+                    id_z_minus = i
+
+        ids = [id_x_plus, id_y_plus, id_z_plus, id_x_minus, id_y_minus, id_z_minus]
+        maxs = [max_dist_x_plus, max_dist_y_plus, max_dist_z_plus, max_dist_x_minus, max_dist_y_minus, max_dist_z_minus]
+        
+        return maxs, ids
+    
+
     def xi(self, g):
         return np.tanh(g)
     
@@ -111,7 +154,8 @@ class PointAgent(PointMass):
         distances = []
 
         if len(peers) > 0:
-            mins, ids = self.get_nearest_distances(peers)
+            #mins, ids = self.get_nearest_distances(peers)
+            mins, ids = self.get_farthest_distances(peers)
 
             for i in range(6):
                 if ids[i] == -1:

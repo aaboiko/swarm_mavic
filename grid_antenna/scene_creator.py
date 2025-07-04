@@ -76,11 +76,11 @@ def check_static_points(traj_path):
         plt.show()
 
 
-def spinning_line(traj_path, gap, n_agents, steps_from_center=0, rot_angle=np.pi/2):
+def spinning_line(traj_path, gap, n_agents, steps_from_center=0, rot_angle=np.pi/2, n_iters=10000):
     open(traj_path, "w").close()
 
     with open(traj_path, "w") as file:
-        for t in tqdm(np.linspace(0, rot_angle, n_frames)):
+        for t in tqdm(np.linspace(0, rot_angle, n_iters)):
             line = f""
 
             for i in range(steps_from_center, n_agents + steps_from_center):
@@ -182,12 +182,12 @@ def static_sin_points(n_agents=13):
     return points
 
 
-def spinning_line_points(n_agents=10, gap=1, steps_from_center=0):
+def spinning_line_points(n_agents=10, gap=1, steps_from_center=0, angle=0):
     points = []
 
     for i in range(steps_from_center, n_agents + steps_from_center):
-        x = i * gap
-        y = 0
+        x = i * gap * np.cos(angle)
+        y = i * gap * np.sin(angle)
         z = 1
         points.append((x, y, z))
 
@@ -245,7 +245,7 @@ def draw_control(traj_path, id):
                 x, y, z, dx, dy, dz, ux, uy, uz, peer_state, id, is_alive = point
 
 
-#spinning_line(traj_path_spinning_line, 1, 6, steps_from_center=2, rot_angle=np.pi/3)
+#spinning_line(traj_path_spinning_line, 1, 6, steps_from_center=2, rot_angle=2*np.pi, n_iters=60000)
 #sliding_line(traj_path_sliding_line, 10)
 
 #check_traj(traj_path_spinning_line)
