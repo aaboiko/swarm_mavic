@@ -150,6 +150,18 @@ def control_force(distances, point):
     return np.array([ux, uy, uz])
 
 
+def external_force(point, t):
+    x, y, z = point.pose
+
+    return np.array([
+        #2.0 * np.cos(2 * np.pi / 200 * t),
+        #2.0 * np.sin(2 * np.pi / 200 * t),
+        2.0,
+        0,
+        0
+    ])
+
+
 def write_log(path, points):
     with open(path, "a") as file:
         line = f""
@@ -167,7 +179,16 @@ def write_log(path, points):
         file.write(line + "\n")
 
 
-def process(n_points, log_path, anchor_traj_path="logs/trajs/static.txt", dropout=False, newcomers=False, dropout_idx=[], n_newcomers=4):
+def process(n_points, 
+            log_path, 
+            anchor_traj_path, 
+            dropout=False, 
+            newcomers=False, 
+            dropout_idx=[], 
+            n_newcomers=4,
+            dropout_iter=0,
+            newcome_iter=0):
+    
     print('processing...')
 
     R_min = 0.1
@@ -213,7 +234,7 @@ def process(n_points, log_path, anchor_traj_path="logs/trajs/static.txt", dropou
     open(log_path, "w").close()
 
     for iter in tqdm(range(n_iters)):
-        if iter == 4000:
+        if iter == dropout_iter or iter == newcome_iter:
             flag = True
 
         write_log(log_path, points)
@@ -250,7 +271,8 @@ def process(n_points, log_path, anchor_traj_path="logs/trajs/static.txt", dropou
                             else:
                                 distances.append(0)
 
-                force = control_force(distances, point)
+                t = iter * dt
+                force = control_force(distances, point) + external_force(point, t)
                 point.apply_force(force)
                 point.step(dt)
 
@@ -490,7 +512,7 @@ traj_path_sin = "logs/trajs/sin_xy.txt"
 traj_path_static = "logs/trajs/static.txt"
 
 
-def run(scene_name, traj_path):
+def run(scene_name, traj_path, n_points):
     log_path = f"logs/point_mass/log_{scene_name}.txt"
 
     gif_path_xy = f"gifs/{scene_name}_xy.gif"
@@ -500,7 +522,7 @@ def run(scene_name, traj_path):
     graph_path_z = f"gifs/{scene_name}_z.jpg"
     graph_path_xy = f"gifs/{scene_name}_xy.jpg"
 
-    process(log_path, anchor_traj_path=traj_path)
+    process(n_points, log_path, traj_path)
 
     create_gif(log_path, gif_path_xz, traj_path, flag="xz", frame_step=10)
     create_gif(log_path, gif_path_xy, traj_path, flag="xy", frame_step=10)
@@ -508,3 +530,6 @@ def run(scene_name, traj_path):
 
     plot_graph_z(log_path, traj_path, graph_path_z)
     plot_graph_xy(log_path, traj_path, graph_path_xy)
+
+
+run("disturbed", traj_path_static, 10)
