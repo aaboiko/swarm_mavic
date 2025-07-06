@@ -153,10 +153,15 @@ def control_force(distances, point):
 def external_force(point, t):
     x, y, z = point.pose
 
+    if t >= 50 and t <= 100:
+        f = 1.0
+    elif t >= 150 and t <= 200:
+        f = -1.0
+    else:
+        f = 0
+
     return np.array([
-        #2.0 * np.cos(2 * np.pi / 200 * t),
-        #2.0 * np.sin(2 * np.pi / 200 * t),
-        2.0,
+        f,
         0,
         0
     ])
@@ -191,7 +196,7 @@ def process(n_points,
     
     print('processing...')
 
-    R_min = 0.1
+    R_min = 1.0
     sigma_alpha, sigma_beta = 0.8, 0.8
     points = []
 
@@ -532,4 +537,4 @@ def run(scene_name, traj_path, n_points):
     plot_graph_xy(log_path, traj_path, graph_path_xy)
 
 
-run("disturbed", traj_path_static, 10)
+run("step_gusts_1", traj_path_static, 10)
