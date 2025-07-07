@@ -123,11 +123,14 @@ class Agent_1D:
 
 
 class Pacemaker:
-    def __init__(self, x_0=0, velocity=1.0, dt=0.02):
+    def __init__(self, motion_func, x_0=0, velocity=1.0, dt=0.02):
         self.pose = x_0
         self.dpose = velocity
         self.dt = dt
+        self.t = 0
+        self.motion_func = motion_func
 
     
     def step(self):
-        self.pose = self.pose + self.dpose * self.dt
+        self.t += self.dt
+        self.pose = self.motion_func(self.t)
