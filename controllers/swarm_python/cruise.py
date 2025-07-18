@@ -8,18 +8,25 @@ from tqdm import tqdm
 from functools import partial
 
 n_params = 6
+gravity = 0.981
 
 R_vis = 1.0
 w = 0.5
-u_max = 0.5
-dt = 0.02
-traj_len = 10000
+u_max = 0.0
 
-n_frames = 10000
 data = []
 
 s_point = 30
 s_anchor = 60
+s_point_3d = 100
+s_anchor_3d = 200
+
+fig_3d = plt.figure(figsize = (20, 20))
+ax_3d = fig_3d.add_subplot(projection='3d')
+
+x_bounds = (-9, 9)
+y_bounds = (-9, 9)
+z_bounds = (-2, 2)
 
 colorize_perception_area = True
 points_colors = ["magenta", "blue", "violet", "black", "brown", "aquamarine", "aqua", "gold", "coral", "chocolate", "purple", "teal", "pink", "gold", "violet", "magenta"]
@@ -27,7 +34,9 @@ circle_colors = ["blue", "green", "red"]
 
 pacemaker_velocity = -0.0
 pacemaker_acc = -0.25
-pacemaker_motion_func = lambda t: pacemaker_velocity * t + 0.5 * pacemaker_acc * t**2
+pacemaker_motion_func = lambda t: pacemaker_velocity * t
+spatial_traj_func = lambda s: np.array([8 * np.cos(s), 8 * np.sin(s), np.sin(3 * s)])
+spatial_traj_derivative_func = lambda s: np.array([-8 * np.sin(s), 8 * np.cos(s), 3 * np.cos(s)])
 
 
 def sign(x):
@@ -128,7 +137,12 @@ def write_log(path, points):
 
 
 def process(n_points,
+            n_iters,
+            dt,
             log_path,
+            pacemaker_motion_func,
+            spatial_traj_func,
+            spatial_traj_derivative_func
             ):
     
     print('processing...')
@@ -146,7 +160,6 @@ def process(n_points,
 
     pacemaker = Pacemaker(pacemaker_motion_func)
 
-    n_iters = 10000
     open(log_path, "w").close()
 
     for iter in tqdm(range(n_iters)):
@@ -158,8 +171,10 @@ def process(n_points,
                 point.peer_state = p_state
 
                 min_dist_plus, min_dist_minus, has_peer_forward, has_peer_back = get_nearest_distances(peers)
+                dot_x, dot_y, dot_z = spatial_traj_derivative_func(point.pose)
+                sin_phi = dot_z / np.sqrt(dot_x**2 + dot_y**2 + dot_z**2)
 
-                force = control_force(min_dist_plus, min_dist_minus, has_peer_forward, has_peer_back, point)
+                force = control_force(min_dist_plus, min_dist_minus, has_peer_forward, has_peer_back, point) - gravity * sin_phi
                 point.apply_force(force)
                 point.step(dt)
 
@@ -175,7 +190,7 @@ def circle_transform(pose, radius=8.0):
     ])
 
 
-def animate(i):
+def animate(i, spatial_traj_func=spatial_traj_func, dt=0.01):
     nums = data[i]
     points = np.array(nums).reshape(-1, n_params)
     pacemaker_pose = pacemaker_motion_func(i * dt)
@@ -188,10 +203,10 @@ def animate(i):
     plt.ylabel('y')
 
     plt.gca().set_aspect('equal', adjustable='box')
-    traj_circle = Circle(xy=(0, 0), radius=8.0, color="green", fill=False)
+    traj_circle = Circle(xy=(0, 0), radius=5.0, color="green", fill=False)
     plt.gca().add_artist(traj_circle)
 
-    x_pacemaker, y_pacemaker = circle_transform(pacemaker_pose)
+    x_pacemaker, y_pacemaker, z_pacemaker = spatial_traj_func(pacemaker_pose)
     plt.scatter(x_pacemaker, y_pacemaker, s=s_anchor, color="red")
 
     for point in points:
@@ -203,14 +218,49 @@ def animate(i):
             else:
                 circle_color = "grey"
 
-            x, y = circle_transform(pose)
+            x, y, z = spatial_traj_func(pose)
             plt.scatter(x, y, s=s_point, color="blue")
             circle = Circle(xy=(x, y), radius=R_vis, color=circle_color, alpha=0.2)
 
             plt.gca().add_artist(circle)
 
 
-def create_gif(log_path, gif_path, frame_step=4):
+def animate_3d(i, spatial_traj_func=spatial_traj_func, pacemaker_motion_func=pacemaker_motion_func, dt=0.01):
+    ax_3d.clear()
+
+    ax_3d.set_xlabel('x')
+    ax_3d.set_ylabel('y')
+    ax_3d.set_zlabel('z')
+
+    ax_3d.set_xlim(x_bounds)
+    ax_3d.set_ylim(y_bounds)
+    ax_3d.set_zlim(z_bounds)
+
+    ax_3d.set_aspect('equal', adjustable='box')
+    nums = data[i]
+    t = i * dt
+
+    traj_points = np.array([spatial_traj_func(s) for s in np.linspace(0, 2 * np.pi, 100)])
+    xs = traj_points[:,0]
+    ys = traj_points[:,1]
+    zs = traj_points[:,2]
+    ax_3d.plot(xs, ys, zs, color="green")
+
+    points = np.array(nums).reshape(-1, n_params)
+    pacemaker_pose = pacemaker_motion_func(t)
+    x_pacemaker, y_pacemaker, z_pacemaker = spatial_traj_func(pacemaker_pose)
+    ax_3d.scatter(x_pacemaker, y_pacemaker, z_pacemaker, s=s_anchor_3d, color="red")
+    #print(f"i = {i}, t = {t}, pose = {pacemaker_pose}, x = {x_pacemaker}, y = {y_pacemaker}, z = {z_pacemaker}")
+
+    for point in points:
+        pose, dpose, u, peer_state, id, is_alive = point
+
+        if int(is_alive) > 0:
+            x, y, z = spatial_traj_func(pose)
+            ax_3d.scatter(x, y, z, s=s_point_3d, color="blue")
+
+
+def create_gif(log_path, gif_path, spatial_traj_func, pacemaker_motion_func, dt, frame_step=4, flag="xy", n_frames=10000):
     print(f"creating gif {gif_path}")
     iters = 0
 
@@ -225,12 +275,16 @@ def create_gif(log_path, gif_path, frame_step=4):
             if iters >= n_frames:
                 break
         
-        fig, ax = plt.subplots()
-        anim = animation.FuncAnimation(fig, animate, frames = tqdm(range(0, n_frames, frame_step)), interval = 20)
+        if flag == "xy":
+            fig, ax = plt.subplots()
+            anim = animation.FuncAnimation(fig, partial(animate, spatial_traj_func=spatial_traj_func, dt=dt), frames = tqdm(range(0, n_frames, frame_step)), interval = 20)
+        if flag == "3d":
+            anim = animation.FuncAnimation(fig_3d, partial(animate_3d, spatial_traj_func=spatial_traj_func, pacemaker_motion_func=pacemaker_motion_func, dt=dt), frames = tqdm(range(0, n_frames, frame_step)), interval = 20)
+
         anim.save(gif_path, fps = 60, writer = 'pillow')
 
 
-def plot_graph(log_path, graph_path):
+def plot_graph(log_path, graph_path, dt=0.01):
     print(f"plotting graph: {graph_path}")
 
     with open(log_path, "r") as file:
@@ -272,16 +326,53 @@ def plot_graph(log_path, graph_path):
         #plt.ylim(z_bounds)
         
         plt.savefig(graph_path)
-        plt.show()
 
 
-def run(scene_name, n_points):
+def run(scene_name, 
+        n_points, 
+        spatial_traj_func, 
+        spatial_traj_derivative_func, 
+        pacemaker_motion_func, 
+        n_iters, 
+        dt):
+    
     log_path = f"logs/cruise_control/log_{scene_name}.txt"
-    gif_path = f"gifs/{scene_name}.gif"
+    gif_path_xy = f"gifs/{scene_name}_xy.gif"
+    gif_path_3d = f"gifs/{scene_name}_3d.gif"
     graph_path = f"gifs/{scene_name}.jpg"
 
-    process(n_points, log_path)
-    create_gif(log_path, gif_path, frame_step=10)
-    plot_graph(log_path, graph_path)
+    process(n_points,
+            n_iters,
+            dt, 
+            log_path, 
+            pacemaker_motion_func,
+            spatial_traj_func,
+            spatial_traj_derivative_func)
+    
+    create_gif(log_path, 
+               gif_path_xy, 
+               spatial_traj_func, 
+               pacemaker_motion_func, 
+               dt, 
+               frame_step=10,
+               n_frames=n_iters,
+               flag="xy")
+    
+    create_gif(log_path, 
+               gif_path_3d, 
+               spatial_traj_func, 
+               pacemaker_motion_func, 
+               dt, 
+               frame_step=25,
+               n_frames=n_iters,
+               flag="3d")
+    
+    plot_graph(log_path, graph_path, dt=dt)
 
-run("cruise_control_acc", 10)
+run("cruise_control_spatial", 
+    2, 
+    spatial_traj_func,
+    spatial_traj_derivative_func,
+    pacemaker_motion_func,
+    20000,
+    0.01)

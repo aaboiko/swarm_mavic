@@ -206,6 +206,18 @@ def sliding_line_points(n_agents=10, gap=1):
     return points
 
 
+def cruise_path_points():
+    points = []
+
+    for t in np.linspace(0, 2 * np.pi, 100):
+        x = 5 * np.cos(t)
+        y = 5 * np.sin(t)
+        z = np.sin(3 * t)
+        ax_3d.scatter(x, y, z, s=30, color="blue")
+
+    plt.show()
+
+
 def chain_poses(n_agents, R_vis, R_min, sigma_alpha, sigma_beta, x_anchor=0, y_anchor=0, z_anchor=0):
     points = []
     cur_x, cur_y, cur_z = x_anchor, y_anchor, z_anchor
@@ -253,3 +265,5 @@ def draw_control(traj_path, id):
 
 #chain_initialization(50, 1.0, 0.2, 0.1, 0.8)
 #circle_xy(traj_path_circle_xy)
+
+cruise_path_points()

@@ -12,10 +12,10 @@ n_params = 12
 R_vis = 3.0
 w = 0.5
 u_max = 10.0
-dt = 0.02
+dt = 0.01
 traj_len = 10000
 
-n_frames = 10000
+n_frames = 20000
 data = []
 
 s_point = 30
@@ -150,20 +150,19 @@ def control_force(distances, point):
     return np.array([ux, uy, uz])
 
 
-def external_force(point, t):
+def external_force(point, 
+                   t,
+                   type="constant",
+                   f_x=0,
+                   f_y=0,
+                   f_z=0):
+    
     x, y, z = point.pose
 
-    if t >= 50 and t <= 100:
-        f = 1.0
-    elif t >= 150 and t <= 200:
-        f = -1.0
-    else:
-        f = 0
-
     return np.array([
-        f,
-        0,
-        0
+        f_x,
+        f_y,
+        f_z
     ])
 
 
@@ -186,13 +185,16 @@ def write_log(path, points):
 
 def process(n_points, 
             log_path, 
-            anchor_traj_path, 
+            anchor_traj_path,
+            n_iters = 10000,
+            dt=0.02, 
             dropout=False, 
             newcomers=False, 
             dropout_idx=[], 
             n_newcomers=4,
             dropout_iter=0,
-            newcome_iter=0):
+            newcome_iter=0,
+            wind_f_x=0):
     
     print('processing...')
 
@@ -200,7 +202,7 @@ def process(n_points,
     sigma_alpha, sigma_beta = 0.8, 0.8
     points = []
 
-    cur_x, cur_y, cur_z = 4, 0, 1
+    cur_x, cur_y, cur_z = 0, 0, 0
 
     for i in range(n_points):
         interval = np.random.uniform(R_min, R_vis)
@@ -234,7 +236,6 @@ def process(n_points,
 
     anchor.set_trajectory(anchor_traj)
 
-    n_iters = 10000
     flag = False
     open(log_path, "w").close()
 
@@ -277,7 +278,7 @@ def process(n_points,
                                 distances.append(0)
 
                 t = iter * dt
-                force = control_force(distances, point) + external_force(point, t)
+                force = control_force(distances, point) + external_force(point, t, f_x=wind_f_x)
                 point.apply_force(force)
                 point.step(dt)
 
@@ -413,7 +414,7 @@ def create_gif(log_path, gif_path, traj_path, flag="xy", frame_step=4):
         anim.save(gif_path, fps = 60, writer = 'pillow')
 
 
-def plot_graph_z(log_path, traj_path, graph_path):
+def plot_graph_z(log_path, traj_path, graph_path, dt=0.02):
     print(f"plotting graph: {graph_path}")
 
     with open(log_path, "r") as file, open(traj_path, "r") as traj_file:
@@ -457,10 +458,9 @@ def plot_graph_z(log_path, traj_path, graph_path):
         #plt.ylim(z_bounds)
         
         plt.savefig(graph_path)
-        plt.show()
 
 
-def plot_graph_xy(log_path, traj_path, graph_path):
+def plot_graph_xy(log_path, traj_path, graph_path, dt=0.02):
     print(f"plotting graph: {graph_path}")
 
     with open(log_path, "r") as file, open(traj_path, "r") as traj_file:
@@ -507,7 +507,6 @@ def plot_graph_xy(log_path, traj_path, graph_path):
         #plt.ylim((-0.1, 2))
         
         plt.savefig(graph_path)
-        plt.show()
 
 
 traj_path_circle_xy = "logs/trajs/circle_xy.txt"
@@ -517,7 +516,19 @@ traj_path_sin = "logs/trajs/sin_xy.txt"
 traj_path_static = "logs/trajs/static.txt"
 
 
-def run(scene_name, traj_path, n_points):
+def run(scene_name, 
+        traj_path, 
+        n_points,
+        wind_f_x=0,
+        n_iters = 10000,
+        dt=0.02,
+        flag_process=True,
+        flag_create_gif_xz=True,
+        flag_create_gif_xy=True,
+        flag_create_gif_3d=True,
+        flag_plot_graph_z=True,
+        flag_plot_grapg_xy=True):
+    
     log_path = f"logs/point_mass/log_{scene_name}.txt"
 
     gif_path_xy = f"gifs/{scene_name}_xy.gif"
@@ -527,14 +538,113 @@ def run(scene_name, traj_path, n_points):
     graph_path_z = f"gifs/{scene_name}_z.jpg"
     graph_path_xy = f"gifs/{scene_name}_xy.jpg"
 
-    process(n_points, log_path, traj_path)
+    if flag_process:
+        process(n_points, log_path, traj_path, wind_f_x=wind_f_x, n_iters=n_iters, dt=dt)
 
-    create_gif(log_path, gif_path_xz, traj_path, flag="xz", frame_step=10)
-    create_gif(log_path, gif_path_xy, traj_path, flag="xy", frame_step=10)
-    create_gif(log_path, gif_path_3d, traj_path, flag="3d", frame_step=20)
+    if flag_create_gif_xz:
+        create_gif(log_path, gif_path_xz, traj_path, flag="xz", frame_step=10)
+    if flag_create_gif_xy:
+        create_gif(log_path, gif_path_xy, traj_path, flag="xy", frame_step=10)
+    if flag_create_gif_3d:
+        create_gif(log_path, gif_path_3d, traj_path, flag="3d", frame_step=20)
 
-    plot_graph_z(log_path, traj_path, graph_path_z)
-    plot_graph_xy(log_path, traj_path, graph_path_xy)
+    if flag_plot_graph_z:
+        plot_graph_z(log_path, traj_path, graph_path_z, dt=dt)
+    if flag_plot_grapg_xy:
+        plot_graph_xy(log_path, traj_path, graph_path_xy, dt=dt)
 
 
-run("step_gusts_1", traj_path_static, 10)
+def compare_wind_forces():
+    fig = plt.figure(figsize = (20, 20))
+    ax = fig.add_subplot()
+    n = 20
+    n_iters = 20000
+    dt = 0.01
+
+    for i, force in enumerate(np.linspace(0.5, 5, 10)):
+        run("disturbed_aux", 
+            traj_path_static, 
+            n, 
+            wind_f_x=force,
+            n_iters=n_iters,
+            dt=dt,
+            flag_create_gif_xz=False,
+            flag_create_gif_xy=False,
+            flag_create_gif_3d=False,
+            flag_plot_graph_z=False,
+            flag_plot_grapg_xy=False)
+        
+        log_path = f"logs/point_mass/log_disturbed_aux.txt"
+        data = np.loadtxt(log_path)[-1].reshape(-1, n_params)[:,0]
+        ys = [w * i for i in range(n)]
+        ax.plot(data.tolist(), ys, color=points_colors[i], label=f"{force} H")
+
+    plt.legend()
+    plt.xlabel("x", fontsize=20)
+    plt.ylabel("z", fontsize=20)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    plt.title("Swarm distribution from wind force")
+    plt.savefig("gifs/common_aux.jpg")
+
+
+def compare_wind_forces_with_metrics():
+    fig = plt.figure(figsize = (20, 20))
+    ax = fig.add_subplot()
+    n = 20
+    n_iters = 20000
+    dt = 0.01
+    forces, mins, maxs, means = [], [], [], []
+
+    for i, force in enumerate(np.linspace(0.1, 9.5, 100)):
+        print(f"Iteration {i + 1}")
+        run("disturbed_aux", 
+            traj_path_static, 
+            n, 
+            wind_f_x=force,
+            n_iters=n_iters,
+            dt=dt,
+            flag_create_gif_xz=False,
+            flag_create_gif_xy=False,
+            flag_create_gif_3d=False,
+            flag_plot_graph_z=False,
+            flag_plot_grapg_xy=False)
+        
+        log_path = f"logs/point_mass/log_disturbed_aux.txt"
+        data = np.loadtxt(log_path)[-1].reshape(-1, n_params)[:,0]
+        e_min = data.min()
+        e_max = data.max()
+        e_mean = data.mean()
+
+        mins.append(e_min)
+        maxs.append(e_max)
+        means.append(e_mean)
+        forces.append(force)
+
+    ax.plot(forces, mins, color="red", label="min errors")
+    ax.plot(forces, maxs, color="green", label="max errors")
+    ax.plot(forces, means, color="blue", label="mean errors")
+
+    plt.legend()
+    plt.xlabel("Wind force, H", fontsize=20)
+    plt.ylabel("Distance", fontsize=20)
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    plt.title("Distances from desired axis from wind force")
+    plt.savefig("gifs/common_aux_metrics.jpg")
+
+    logdata = np.vstack((
+        np.array(forces),
+        np.array(mins),
+        np.array(maxs),
+        np.array(means)
+    ))
+    np.savetxt("gifs/log_metrics.txt", logdata)
+
+'''run("disturbed_30", 
+    traj_path_static, 
+    10, 
+    wind_f_x=3.0,
+    n_iters=20000,
+    dt=0.01)'''
+
+#compare_wind_forces()
+compare_wind_forces_with_metrics()
