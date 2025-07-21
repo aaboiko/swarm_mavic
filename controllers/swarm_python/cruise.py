@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import pickle
 
 from point_mass import Agent_1D, Pacemaker
 from matplotlib.patches import Circle
@@ -11,11 +12,11 @@ from scipy.interpolate import interp1d
 from scipy.optimize import root_scalar
 
 n_params = 6
-gravity = 0.981
+gravity = 1.981
 
 R_vis = 1.0
 w = 0.5
-u_max = 0.0
+u_max = 10.0
 
 data = []
 
@@ -56,9 +57,11 @@ def reverse_integrate(s, t_guess=1.0):
     return sol.root
 
 
-t_values = np.linspace(-6 * np.pi, 6 * np.pi, 200000)
-s_values = np.array([forward_integrate(t) for t in t_values])
-t_interpolator = interp1d(s_values, t_values, kind='cubic', fill_value="extrapolate")
+#t_values = np.linspace(-6 * np.pi, 6 * np.pi, 200000)
+#s_values = np.array([forward_integrate(t) for t in t_values])
+#t_interpolator = interp1d(s_values, t_values, kind='cubic', fill_value="extrapolate")
+#pickle.dump(t_interpolator, open("t_interpolator.bin", "wb"))
+t_interpolator = pickle.load(open("t_interpolator.bin", "rb"))
 
 
 def sign(x):
@@ -193,7 +196,8 @@ def process(n_points,
                 point.peer_state = p_state
 
                 min_dist_plus, min_dist_minus, has_peer_forward, has_peer_back = get_nearest_distances(peers)
-                dot_x, dot_y, dot_z = spatial_traj_derivative_func(point.pose)
+                t_of_traj = t_interpolator(point.pose)
+                dot_x, dot_y, dot_z = spatial_traj_derivative_func(t_of_traj)
                 sin_phi = dot_z / np.sqrt(dot_x**2 + dot_y**2 + dot_z**2)
 
                 force = control_force(min_dist_plus, min_dist_minus, has_peer_forward, has_peer_back, point) - gravity * sin_phi
@@ -393,7 +397,7 @@ def run(scene_name,
     plot_graph(log_path, graph_path, dt=dt)
 
 run("cruise_control_spatial", 
-    3, 
+    5, 
     spatial_traj_func,
     spatial_traj_derivative_func,
     pacemaker_motion_func,
