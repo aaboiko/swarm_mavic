@@ -6,6 +6,9 @@ from point_mass import Agent_1D, Pacemaker
 from matplotlib.patches import Circle
 from tqdm import tqdm
 from functools import partial
+from scipy import integrate
+from scipy.interpolate import interp1d
+from scipy.optimize import root_scalar
 
 n_params = 6
 gravity = 0.981
@@ -32,11 +35,30 @@ colorize_perception_area = True
 points_colors = ["magenta", "blue", "violet", "black", "brown", "aquamarine", "aqua", "gold", "coral", "chocolate", "purple", "teal", "pink", "gold", "violet", "magenta"]
 circle_colors = ["blue", "green", "red"]
 
-pacemaker_velocity = -0.0
+pacemaker_velocity = -0.1
 pacemaker_acc = -0.25
+
+integrand = lambda t: np.sqrt(64 + 9 * np.cos(3 * t)**2)
 pacemaker_motion_func = lambda t: pacemaker_velocity * t
 spatial_traj_func = lambda s: np.array([8 * np.cos(s), 8 * np.sin(s), np.sin(3 * s)])
-spatial_traj_derivative_func = lambda s: np.array([-8 * np.sin(s), 8 * np.cos(s), 3 * np.cos(s)])
+spatial_traj_derivative_func = lambda s: np.array([-8 * np.sin(s), 8 * np.cos(s), 3 * np.cos(3 * s)])
+
+
+def forward_integrate(t):
+    res, _ = integrate.quad(integrand, 0, t)
+    return res
+
+
+def reverse_integrate(s, t_guess=1.0):
+    sol = root_scalar(lambda t: forward_integrate(t) - s, 
+                      bracket=[0, 2 * np.pi],  
+                      method='brentq')  
+    return sol.root
+
+
+t_values = np.linspace(-6 * np.pi, 6 * np.pi, 200000)
+s_values = np.array([forward_integrate(t) for t in t_values])
+t_interpolator = interp1d(s_values, t_values, kind='cubic', fill_value="extrapolate")
 
 
 def sign(x):
@@ -203,7 +225,7 @@ def animate(i, spatial_traj_func=spatial_traj_func, dt=0.01):
     plt.ylabel('y')
 
     plt.gca().set_aspect('equal', adjustable='box')
-    traj_circle = Circle(xy=(0, 0), radius=5.0, color="green", fill=False)
+    traj_circle = Circle(xy=(0, 0), radius=8.0, color="green", fill=False)
     plt.gca().add_artist(traj_circle)
 
     x_pacemaker, y_pacemaker, z_pacemaker = spatial_traj_func(pacemaker_pose)
@@ -248,15 +270,16 @@ def animate_3d(i, spatial_traj_func=spatial_traj_func, pacemaker_motion_func=pac
 
     points = np.array(nums).reshape(-1, n_params)
     pacemaker_pose = pacemaker_motion_func(t)
-    x_pacemaker, y_pacemaker, z_pacemaker = spatial_traj_func(pacemaker_pose)
+    pacemaker_t_param = t_interpolator(pacemaker_pose)
+    x_pacemaker, y_pacemaker, z_pacemaker = spatial_traj_func(pacemaker_t_param)
     ax_3d.scatter(x_pacemaker, y_pacemaker, z_pacemaker, s=s_anchor_3d, color="red")
-    #print(f"i = {i}, t = {t}, pose = {pacemaker_pose}, x = {x_pacemaker}, y = {y_pacemaker}, z = {z_pacemaker}")
 
     for point in points:
         pose, dpose, u, peer_state, id, is_alive = point
 
         if int(is_alive) > 0:
-            x, y, z = spatial_traj_func(pose)
+            point_t_param = t_interpolator(pose)
+            x, y, z = spatial_traj_func(point_t_param)
             ax_3d.scatter(x, y, z, s=s_point_3d, color="blue")
 
 
@@ -349,14 +372,14 @@ def run(scene_name,
             spatial_traj_func,
             spatial_traj_derivative_func)
     
-    create_gif(log_path, 
+    '''create_gif(log_path, 
                gif_path_xy, 
                spatial_traj_func, 
                pacemaker_motion_func, 
                dt, 
                frame_step=10,
                n_frames=n_iters,
-               flag="xy")
+               flag="xy")'''
     
     create_gif(log_path, 
                gif_path_3d, 
@@ -366,13 +389,14 @@ def run(scene_name,
                frame_step=25,
                n_frames=n_iters,
                flag="3d")
-    
+
     plot_graph(log_path, graph_path, dt=dt)
 
 run("cruise_control_spatial", 
-    2, 
+    3, 
     spatial_traj_func,
     spatial_traj_derivative_func,
     pacemaker_motion_func,
     20000,
     0.01)
+
