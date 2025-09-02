@@ -1,0 +1,308 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/Floor.proto"
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/bitcraze/crazyflie/protos/Crazyflie.proto"
+
+
+WorldInfo {
+  info [
+    "This demonstration shows a DJI Mavic 2 PRO flying over a rural area."
+    "After the drone has taken off, you can control it with the keyboard of your computer."
+  ]
+  title "Crazyflie swarm"
+  basicTimeStep 8
+  defaultDamping Damping {
+    linear 0.5
+    angular 0.5
+  }
+}
+
+Viewpoint {
+  orientation -0.03132509357312057 -0.004229724205027985 0.9995002991224087 2.901671340011777
+  position 3.392036511082617 -0.9278446049316036 0.7513423909480075
+  near 0.2
+  follow "Crazyflie"
+  followSmoothness 0.2
+}
+
+Background{
+   skyColor 1 1 1
+   backUrl "textures/white.jpg"
+   bottomUrl "textures/white.jpg"
+   frontUrl "textures/white.jpg"
+   leftUrl "textures/white.jpg"
+   rightUrl "textures/white.jpg"
+   topUrl "textures/white.jpg"
+   luminosity 0
+}
+
+TexturedBackgroundLight {
+    castShadows FALSE
+}
+
+Floor {
+  translation 0 -4.22 0
+  rotation 1 0 0 0
+  size 200 164
+  tileSize 1 1
+  appearance PBRAppearance {
+    baseColorMap ImageTexture {
+      url [
+        "textures/checkered_parquetry.jpg"
+      ]
+    }
+    roughness 1
+    metalness 0
+    transparency 0.04
+  }
+}
+
+Crazyflie {
+  translation 0 0 0.015
+  rotation 0 0 1 0
+  controller "anchor"
+  supervisor TRUE
+  name "robot_0"
+}Crazyflie {
+  translation 1.4536400289432176 -9.295740482802316 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_1"
+}
+
+Crazyflie {
+  translation 5.156642523450273 1.7932552282316543 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_2"
+}
+
+Crazyflie {
+  translation 5.455512088462065 5.746925807612499 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_3"
+}
+
+Crazyflie {
+  translation 3.0840277667320706 6.665590716303029 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_4"
+}
+
+Crazyflie {
+  translation -1.09860687230662 9.638392250409005 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_5"
+}
+
+Crazyflie {
+  translation -9.314610139811276 -9.646150179267707 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_6"
+}
+
+Crazyflie {
+  translation 9.128559045029789 6.598364358758651 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_7"
+}
+
+Crazyflie {
+  translation -8.707787709726196 8.814419312949482 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_8"
+}
+
+Crazyflie {
+  translation -7.156776085984877 -9.986316289054383 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_9"
+}
+
+Crazyflie {
+  translation -0.4971670954480061 5.6130298295160905 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_10"
+}
+
+Crazyflie {
+  translation 8.629647532450221 -2.748489007164416 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_11"
+}
+
+Crazyflie {
+  translation -0.8499428112615686 7.245306984365065 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_12"
+}
+
+Crazyflie {
+  translation 0.4135621152515796 -9.860496706443529 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_13"
+}
+
+Crazyflie {
+  translation -9.307747300180043 -5.653543696338197 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_14"
+}
+
+Crazyflie {
+  translation 2.3003830746660885 -1.7809144058454116 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_15"
+}
+
+Crazyflie {
+  translation -8.98844832130056 -1.4363722048678245 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_16"
+}
+
+Crazyflie {
+  translation 2.536117758609304 -2.129762420502468 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_17"
+}
+
+Crazyflie {
+  translation 0.7970604269130881 -2.363989221055933 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_18"
+}
+
+Crazyflie {
+  translation 8.359419202124375 -5.062708338706554 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_19"
+}
+
+Crazyflie {
+  translation 4.930118044329211 2.925279889342356 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_20"
+}
+
+Crazyflie {
+  translation -6.284242357992764 -3.6240813880792206 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_21"
+}
+
+Crazyflie {
+  translation 0.3492391418422791 8.714281986860435 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_22"
+}
+
+Crazyflie {
+  translation -6.674393224204147 -1.8422723459629609 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_23"
+}
+
+Crazyflie {
+  translation 3.1847268689998494 9.045937027803244 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_24"
+}
+
+Crazyflie {
+  translation -8.796825190550878 7.830992919807372 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_25"
+}
+
+Crazyflie {
+  translation 8.672015390221869 -7.828332773807141 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_26"
+}
+
+Crazyflie {
+  translation -3.7259598269424306 4.142603205020883 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_27"
+}
+
+Crazyflie {
+  translation -6.088220329758613 2.0717566523782445 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_28"
+}
+
+Crazyflie {
+  translation -9.33251845077232 -7.157118499089883 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_29"
+}
+
+Crazyflie {
+  translation -3.495319209835519 0.4672839183446129 0.015
+  rotation 0 0 1 0
+  controller "agent"
+  supervisor TRUE
+  name "robot_30"
+}
+

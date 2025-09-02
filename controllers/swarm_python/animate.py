@@ -14,6 +14,10 @@ y_bound_max = 10
 z_bound_min = -1
 z_bound_max = 10
 
+x_bounds = (-10, 10)
+y_bounds = (-10, 10)
+z_bounds = (0, 20)
+
 s_point = 10
 s_anchor = 20
 
@@ -21,7 +25,10 @@ data = []
 fig, ax = plt.subplots()
 x_anchor = np.array([0.0, 0.0, 1.0])
 R_vis = 2.0   
-traj_len = 2400
+traj_len = 4800
+n_frames = 2500
+
+family_colors = ["green", "blue", "orange", "black", "brown", "aquamarine", "aqua", "azure", "coral", "chocolate", "purple", "teal", "pink", "gold", "violet", "magenta"]
 
 
 def animate(i):
@@ -49,7 +56,7 @@ def animate_1_xy(i):
     
     print(f"animate: {i}/{len(data)}")
     nums = data[i]
-    points = np.array(nums).reshape(-1, 10)
+    points = np.array(nums).reshape(-1, 11)
     anchor_pose = [float(item) for item in traj_lines[i % traj_len].rstrip().split(' ')]
     x_anc, y_anc, z_anc = anchor_pose
     circle_colors = ["blue", "green", "red"]
@@ -79,7 +86,7 @@ def animate_1_xz(i):
     
     print(f"animate: {i}/{len(data)}")
     nums = data[i]
-    points = np.array(nums).reshape(-1, 10)
+    points = np.array(nums).reshape(-1, n_params)
     anchor_pose = [float(item) for item in traj_lines[i % traj_len].rstrip().split(' ')]
     x_anc, y_anc, z_anc = anchor_pose
     circle_colors = ["blue", "green", "red"]
@@ -101,7 +108,7 @@ def animate_1_xz(i):
 
         plt.gca().add_artist(circle)
 
-           
+
 def create_gif(log_path, gif_path):
     iters = 0
     with open(log_path, "r") as file:
@@ -111,11 +118,11 @@ def create_gif(log_path, gif_path):
             data.append(nums)
             iters += 1
 
-            if iters > 2500:
+            if iters > n_frames:
                  break
 
     # создаем анимацию
-    anim = animation.FuncAnimation(fig, animate_1_xz,  frames = len(data), interval = len(data))
+    anim = animation.FuncAnimation(fig, animate_1_xz,  frames = range(0, n_frames, 4), interval = 20)
     # сохраняем анимацию в формате GIF в папку со скриптом
     anim.save(gif_path, fps = 20, writer = 'pillow')
 
@@ -123,5 +130,6 @@ def create_gif(log_path, gif_path):
 log_path = "logs/point_mass/log_acc_4.txt"
 gif_path = "gifs/gif_acc_xz_4.gif"
 traj_path = "logs/trajs/circle_xy.txt"
+n_params = 12
 
 create_gif(log_path, gif_path)

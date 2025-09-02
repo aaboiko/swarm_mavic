@@ -37,12 +37,12 @@ TexturedBackgroundLight {
 Floor {
   translation 0 -4.22 0
   rotation 1 0 0 0
-  size 20 16.4
+  size 200 164
   tileSize 1 1
   appearance PBRAppearance {
     baseColorMap ImageTexture {
       url [
-        "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/default/worlds/textures/asphalt.jpg"
+        "textures/white.jpg"
       ]
     }
     roughness 1

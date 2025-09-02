@@ -3,22 +3,25 @@ import numpy as np
 kp_att_y = 1
 kd_att_y = 0.5
 
-kp_att_rp = 0.5
+'''kp_att_rp = 0.5
 kd_att_rp = 0.1
 
-'''kp_vel_xy = 2
+kp_vel_xy = 2
 kd_vel_xy = 0.5
 
 kp_z = 4
 ki_z = 0.1
 kd_z = 0.0'''
 
-kp_vel_xy = 4
-kd_vel_xy = 1
+kp_att_rp = 0.5
+kd_att_rp = 0.1
 
-kp_z = 12
+kp_vel_xy = 5
+kd_vel_xy = 1.2
+
+kp_z = 18
 ki_z = 0.3
-kd_z = 7
+kd_z = 11
 
 kp_yaw = 1.0
 
